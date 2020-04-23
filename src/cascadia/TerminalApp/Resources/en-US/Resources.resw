@@ -262,6 +262,9 @@
     <value>Privacy Policy</value>
     <comment>A hyperlink name for the Terminal's privacy policy</comment>
   </data>
+  <data name="AboutDialog_FeedbackLink.Content" xml:space="preserve">
+    <value>Feedback</value>
+  </data>
   <data name="ApplicationDisplayNameUnpackaged" xml:space="preserve">
     <value>Windows Terminal (Unpackaged)</value>
     <comment>This display name is used when the application's name cannot be determined</comment>
