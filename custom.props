@@ -7,6 +7,6 @@
     <VersionMajor>0</VersionMajor>
     <VersionMinor>11</VersionMinor>
     <VersionInfoProductName>Windows Terminal</VersionInfoProductName>
-    <XefAppxManifestVersion>1.0.1392.0</XefAppxManifestVersion>
+    <XefAppxManifestVersion>1.0.1393.0</XefAppxManifestVersion>
   </PropertyGroup>
 </Project>
