@@ -199,8 +199,14 @@ void Terminal::UpdateSettings(winrt::Microsoft::Terminal::Settings::ICoreSetting
     std::unique_ptr<TextBuffer> newTextBuffer;
     try
     {
+        // GH#3848 - Stash away the current attributes the old text buffer is
+        // using. We'll initialize the new buffer with the default attributes,
+        // but after the resize, we'll want to make sure that the new buffer's
+        // current attributes (the ones used for printing new text) match the
+        // old buffer's.
+        const auto oldBufferAttributes = _buffer->GetCurrentAttributes();
         newTextBuffer = std::make_unique<TextBuffer>(bufferSize,
-                                                     _buffer->GetCurrentAttributes(),
+                                                     TextAttribute(),
                                                      0, // temporarily set size to 0 so it won't render.
                                                      _buffer->GetRenderTarget());
 
@@ -228,6 +234,9 @@ void Terminal::UpdateSettings(winrt::Microsoft::Terminal::Settings::ICoreSetting
 
         newViewportTop = oldRows.mutableViewportTop;
         newVisibleTop = oldRows.visibleViewportTop;
+
+        // Restore the actve text attributes
+        newTextBuffer->SetCurrentAttributes(oldBufferAttributes);
     }
     CATCH_RETURN();
 
