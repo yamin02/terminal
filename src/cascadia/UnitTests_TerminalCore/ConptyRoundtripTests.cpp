@@ -211,6 +211,8 @@ class TerminalCoreUnitTests::ConptyRoundtripTests final
 
     TEST_METHOD(TestResizeWithCookedRead);
 
+    TEST_METHOD(ResizeInitializeBufferWithDefaultAttrs);
+
     TEST_METHOD(NewLinesAtBottomWithBackground);
 
 private:
@@ -2850,6 +2852,102 @@ void ConptyRoundtripTests::TestResizeWithCookedRead()
     VERIFY_SUCCEEDED(renderer.PaintFrame());
 
     // By simply reaching the end of this test, we know that we didn't crash. Hooray!
+}
+
+void ConptyRoundtripTests::ResizeInitializeBufferWithDefaultAttrs()
+{
+    // See https://github.com/microsoft/terminal/issues/3848
+    Log::Comment(L"TODO");
+
+    auto& g = ServiceLocator::LocateGlobals();
+    auto& renderer = *g.pRender;
+    auto& gci = g.getConsoleInformation();
+    auto& si = gci.GetActiveOutputBuffer();
+    auto& sm = si.GetStateMachine();
+    auto* hostTb = &si.GetTextBuffer();
+    auto* termTb = term->_buffer.get();
+
+    _flushFirstFrame();
+
+    _checkConptyOutput = false;
+    _logConpty = true;
+
+    auto defaultAttrs = si.GetAttributes();
+    auto conhostGreenAttrs = TextAttribute();
+    // auto conhostGreenAttrs = defaultAttrs;
+
+    // Conhost and Terminal store attributes in different bits.
+    conhostGreenAttrs.SetIndexedAttributes(std::nullopt,
+                                           { static_cast<BYTE>(FOREGROUND_GREEN) });
+    auto terminalGreenAttrs = TextAttribute();
+    terminalGreenAttrs.SetIndexedAttributes(std::nullopt,
+                                            { static_cast<BYTE>(XTERM_GREEN_ATTR) });
+
+    const size_t width = static_cast<size_t>(TerminalViewWidth);
+
+    sm.ProcessString(L"\x1b[m");
+    sm.ProcessString(L"\x1b[2J");
+    sm.ProcessString(L"\x1b[3J");
+    VERIFY_SUCCEEDED(renderer.PaintFrame());
+
+    sm.ProcessString(L"\x1b[42m");
+    sm.ProcessString(L"# ");
+    sm.ProcessString(L"\x1b[m");
+    sm.ProcessString(L"#");
+    sm.ProcessString(L"\r\n");
+
+    sm.ProcessString(L"\x1b[42m");
+    sm.ProcessString(L"# ");
+    sm.ProcessString(L"\x1b[m");
+    sm.ProcessString(L"#");
+    sm.ProcessString(L"\r\n");
+
+    sm.ProcessString(L"\x1b[42m");
+    sm.ProcessString(L"# ");
+    sm.ProcessString(L"\x1b[m");
+    sm.ProcessString(L"#");
+    sm.ProcessString(L"\r\n");
+
+    sm.ProcessString(L"\x1b[42m");
+
+    auto verifyBuffer = [&](const TextBuffer& tb, const til::rectangle viewport, const bool isTerminal) {
+        const auto width = viewport.width<short>();
+
+        // Conhost and Terminal store attributes in different bits.
+        const auto greenAttrs = isTerminal ? terminalGreenAttrs : conhostGreenAttrs;
+
+        for (short row = 0; row < tb.GetSize().Height(); row++)
+        {
+            Log::Comment(NoThrowString().Format(L"Checking row %d...", row));
+
+            VERIFY_IS_FALSE(tb.GetRowByOffset(row).GetCharRow().WasWrapForced());
+
+            const bool hasChar = row < 3;
+            // const auto actualDefaultAttrs = isTerminal ? TextAttribute() : defaultAttrs;
+            const auto actualDefaultAttrs = TextAttribute();
+
+            if (hasChar)
+            {
+                auto iter = TestUtils::VerifyLineContains(tb, { 0, row }, L'#', greenAttrs, 1u);
+                TestUtils::VerifyLineContains(iter, L' ', greenAttrs, 1u);
+                TestUtils::VerifyLineContains(iter, L'#', TextAttribute(), 1u);
+                TestUtils::VerifyLineContains(iter, L' ', actualDefaultAttrs, static_cast<size_t>(width - 3));
+            }
+            else
+            {
+                TestUtils::VerifyLineContains(tb, { 0, row }, L' ', actualDefaultAttrs, viewport.width<size_t>());
+            }
+        }
+    };
+
+    Log::Comment(L"========== Checking the host buffer state ==========");
+    verifyBuffer(*hostTb, si.GetViewport().ToInclusive(), false);
+
+    Log::Comment(L"Painting the frame");
+    VERIFY_SUCCEEDED(renderer.PaintFrame());
+
+    Log::Comment(L"========== Checking the terminal buffer state ==========");
+    verifyBuffer(*termTb, term->_mutableViewport.ToInclusive(), true);
 }
 
 void ConptyRoundtripTests::NewLinesAtBottomWithBackground()
