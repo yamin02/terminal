@@ -224,6 +224,8 @@ CARETBLINKINGENABLED
 CARRIAGERETURN
 cascadia
 catid
+carlos
+zamora
 cazamor
 CBash
 cbb
@@ -2671,6 +2673,7 @@ WINDOWPOSCHANGING
 windowproc
 windowrect
 windowsapp
+windowsdeveloper
 windowsinternalstring
 WINDOWSIZE
 windowsx
