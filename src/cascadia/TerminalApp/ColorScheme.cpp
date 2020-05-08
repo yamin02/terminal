@@ -3,6 +3,7 @@
 
 #include "pch.h"
 #include "ColorScheme.h"
+#include "DefaultSettings.h"
 #include "../../types/inc/Utils.hpp"
 #include "Utils.h"
 #include "JsonUtils.h"
@@ -13,9 +14,10 @@ using namespace winrt::Microsoft::Terminal::Settings;
 using namespace winrt::Microsoft::Terminal::TerminalControl;
 
 static constexpr std::string_view NameKey{ "name" };
-static constexpr std::string_view TableKey{ "colors" };
 static constexpr std::string_view ForegroundKey{ "foreground" };
 static constexpr std::string_view BackgroundKey{ "background" };
+static constexpr std::string_view SelectionBackgroundKey{ "selectionBackground" };
+static constexpr std::string_view CursorColorKey{ "cursorColor" };
 static constexpr std::array<std::string_view, 16> TableColors = {
     "black",
     "red",
@@ -38,16 +40,20 @@ static constexpr std::array<std::string_view, 16> TableColors = {
 ColorScheme::ColorScheme() :
     _schemeName{ L"" },
     _table{},
-    _defaultForeground{ RGB(242, 242, 242) },
-    _defaultBackground{ RGB(12, 12, 12) }
+    _defaultForeground{ DEFAULT_FOREGROUND_WITH_ALPHA },
+    _defaultBackground{ DEFAULT_BACKGROUND_WITH_ALPHA },
+    _selectionBackground{ DEFAULT_FOREGROUND },
+    _cursorColor{ DEFAULT_CURSOR_COLOR }
 {
 }
 
-ColorScheme::ColorScheme(std::wstring name, COLORREF defaultFg, COLORREF defaultBg) :
+ColorScheme::ColorScheme(std::wstring name, COLORREF defaultFg, COLORREF defaultBg, COLORREF cursorColor) :
     _schemeName{ name },
     _table{},
     _defaultForeground{ defaultFg },
-    _defaultBackground{ defaultBg }
+    _defaultBackground{ defaultBg },
+    _selectionBackground{ DEFAULT_FOREGROUND },
+    _cursorColor{ cursorColor }
 {
 }
 
@@ -66,6 +72,8 @@ void ColorScheme::ApplyScheme(TerminalSettings terminalSettings) const
 {
     terminalSettings.DefaultForeground(_defaultForeground);
     terminalSettings.DefaultBackground(_defaultBackground);
+    terminalSettings.SelectionBackground(_selectionBackground);
+    terminalSettings.CursorColor(_cursorColor);
 
     auto const tableCount = gsl::narrow_cast<int>(_table.size());
     for (int i = 0; i < tableCount; i++)
@@ -86,6 +94,8 @@ Json::Value ColorScheme::ToJson() const
     root[JsonKey(NameKey)] = winrt::to_string(_schemeName);
     root[JsonKey(ForegroundKey)] = Utils::ColorToHexString(_defaultForeground);
     root[JsonKey(BackgroundKey)] = Utils::ColorToHexString(_defaultBackground);
+    root[JsonKey(SelectionBackgroundKey)] = Utils::ColorToHexString(_selectionBackground);
+    root[JsonKey(CursorColorKey)] = Utils::ColorToHexString(_cursorColor);
 
     int i = 0;
     for (const auto& colorName : TableColors)
@@ -155,21 +165,15 @@ void ColorScheme::LayerJson(const Json::Value& json)
         const auto color = Utils::ColorFromHexString(bgString.asString());
         _defaultBackground = color;
     }
-
-    // Legacy Deserialization. Leave in place to allow forward compatibility
-    if (auto table{ json[JsonKey(TableKey)] })
+    if (auto sbString{ json[JsonKey(SelectionBackgroundKey)] })
     {
-        int i = 0;
-
-        for (const auto& tableEntry : table)
-        {
-            if (tableEntry.isString())
-            {
-                auto color = Utils::ColorFromHexString(tableEntry.asString());
-                _table.at(i) = color;
-            }
-            i++;
-        }
+        const auto color = Utils::ColorFromHexString(sbString.asString());
+        _selectionBackground = color;
+    }
+    if (auto sbString{ json[JsonKey(CursorColorKey)] })
+    {
+        const auto color = Utils::ColorFromHexString(sbString.asString());
+        _cursorColor = color;
     }
 
     int i = 0;
@@ -202,4 +206,31 @@ COLORREF ColorScheme::GetForeground() const noexcept
 COLORREF ColorScheme::GetBackground() const noexcept
 {
     return _defaultBackground;
+}
+
+COLORREF ColorScheme::GetSelectionBackground() const noexcept
+{
+    return _selectionBackground;
+}
+
+COLORREF ColorScheme::GetCursorColor() const noexcept
+{
+    return _cursorColor;
+}
+
+// Method Description:
+// - Parse the name from the JSON representation of a ColorScheme.
+// Arguments:
+// - json: an object which should be a serialization of a ColorScheme object.
+// Return Value:
+// - the name of the color scheme represented by `json` as a std::wstring optional
+//   i.e. the value of the `name` property.
+// - returns std::nullopt if `json` doesn't have the `name` property
+std::optional<std::wstring> TerminalApp::ColorScheme::GetNameFromJson(const Json::Value& json)
+{
+    if (const auto name{ json[JsonKey(NameKey)] })
+    {
+        return GetWstringFromJson(name);
+    }
+    return std::nullopt;
 }

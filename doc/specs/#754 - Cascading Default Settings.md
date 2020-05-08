@@ -36,7 +36,7 @@ Largely inspired by the settings model that both VS Code (and Sublime Text) use.
 ### Goal: Minimize Re-Serializing `profiles.json`
 
 We want to re-serialize the user settings file, `profiles.json`, as little as
-possible. Each time we serialize the file, there's the possiblity that we've
+possible. Each time we serialize the file, there's the possibility that we've
 re-ordered the keys, as `jsoncpp` provides no ordering guarantee of the keys.
 This isn't great, as each write of the file will randomly re-order the file.
 
@@ -241,7 +241,7 @@ Currently, these profiles are only generated when a user first launches the
 Terminal. If they already have a `profiles.json` file, then we won't run the
 auto-generation behavior. This is obviously not great - if any new types of
 dynamic profiles are added, then users that already have the Terminal installed
-won't get any of these dynamic profiles. Furthemore, if any of the sources of
+won't get any of these dynamic profiles. Furthermore, if any of the sources of
 these dynamic profiles are removed, then the app won't auto-remove the
 associated profile.
 
@@ -520,7 +520,7 @@ would `openDefaultSettings`, and we could bind that to
 ### How does this work with the settings UI?
 
 If we only have one version of the settings models (Globals, Profiles,
-ColorShemes, Keybindings) at runtime, and the user changes one of the settings
+ColorSchemes, Keybindings) at runtime, and the user changes one of the settings
 with the settings UI, how can we tell that settings changed?
 
 Fortunately, this should be handled cleanly by the algorithm proposed above, in
@@ -678,7 +678,7 @@ generators _must_ be enabled to use the dynamic profiles.
   a WinRT interface that extensions could implement, and be triggered just like
   other dynamic profile generators.
 * **Multiple settings files** - This could enable us to place color schemes into
-  a seperate file (like `colorschemes.json`) and put keybindings into their own
+  a separate file (like `colorschemes.json`) and put keybindings into their own
   file as well, and reduce the number of settings in the user's `profiles.json`.
   It's unclear if this is something that we need quite yet, but the same
   layering functionality that enables this scenario could also enable more than
@@ -695,7 +695,7 @@ generators _must_ be enabled to use the dynamic profiles.
   feature spec.
   - We'll also want to make sure that when we're serializing default/dynamic
     profiles, we take into account the state from the global defaults, and we
-    don't duplicate that inormation into the entries for those types of profiles
+    don't duplicate that information into the entries for those types of profiles
     in the user profiles.
 * **Re-ordering profiles** - Under "Solution Design", we provide an algorithm
   for decoding the settings. One of the steps mentioned is parsing the user

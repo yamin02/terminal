@@ -25,7 +25,8 @@
 
 #include "..\inc\ServiceLocator.hpp"
 
-#include "..\interactivity\win32\windowtheme.hpp"
+#include "..\..\inc\conint.h"
+
 #include "..\interactivity\win32\CustomWindowMessages.h"
 
 #include "..\interactivity\win32\windowUiaProvider.hpp"
@@ -68,32 +69,7 @@ using namespace Microsoft::Console::Types;
     LRESULT Status = 0;
     BOOL Unlock = TRUE;
 
-    // If we're during the initial allocation of the console, then the I/O thread is servicing a
-    // Console Connection Request under lock as the input thread is created on the first connection to a client.
-    // Normally we'd take the lock here at the top of the window proc to ensure consistency while servicing messages,
-    // but because the I/O thread needs to hold the lock for the duration of
-    // servicing the connection request, we have a wink-nudge agreement here with the I/O thread about the lock.
-    // As long as the input setup event exists and is signaled, we've been told that the I/O thread has the lock
-    // and is waiting for us to respond.
-    // As long as the input initialized event exists and is unsignaled, we haven't told the I/O thread that we're done
-    // yet and it can resume use of the lock.
-    // So under these conditions where we are assured the I/O thread is holding the lock on our behalf and waiting for us...
-    // skip the lock/unlock behavior down this entire procedure and perform the messages needed to get things set up
-    // knowing we have exclusive reign over the console variables.
-    if (g.consoleInputSetupEvent && g.consoleInputSetupEvent.is_signaled() &&
-        g.consoleInputInitializedEvent && !g.consoleInputInitializedEvent.is_signaled())
-    {
-        Unlock = FALSE;
-    }
-
-    // Under normal conditions, Unlock is TRUE at the top and we will need to take the lock
-    // to process messages.
-    // Under special init conditions, someone else holds the lock for us and we can skip all lock/unlock behavior
-    // by checking the Unlock variable.
-    if (Unlock)
-    {
-        LockConsole();
-    }
+    LockConsole();
 
     SCREEN_INFORMATION& ScreenInfo = GetScreenInfo();
     if (hWnd == nullptr) // TODO: this might not be possible anymore
@@ -108,10 +84,7 @@ using namespace Microsoft::Console::Types;
             Status = DefWindowProcW(hWnd, Message, wParam, lParam);
         }
 
-        if (Unlock)
-        {
-            UnlockConsole();
-        }
+        UnlockConsole();
         return Status;
     }
 
@@ -140,7 +113,7 @@ using namespace Microsoft::Console::Types;
         rc.right = rc.left + pcs->cx;
         rc.bottom = rc.top + pcs->cy;
 
-        // Find nearest montitor.
+        // Find nearest monitor.
         HMONITOR hmon = MonitorFromRect(&rc, MONITOR_DEFAULTTONEAREST);
 
         // This API guarantees that dpix and dpiy will be equal, but neither is an optional parameter so give two UINTs.
@@ -158,7 +131,7 @@ using namespace Microsoft::Console::Types;
         RECT rectProposed = { rc.left, rc.top, 0, 0 };
         _CalculateWindowRect(_pSettings->GetWindowSize(), &rectProposed);
 
-        SetWindowPos(hWnd, NULL, rectProposed.left, rectProposed.top, RECT_WIDTH(&rectProposed), RECT_HEIGHT(&rectProposed), SWP_NOACTIVATE | SWP_NOZORDER);
+        SetWindowPos(hWnd, nullptr, rectProposed.left, rectProposed.top, RECT_WIDTH(&rectProposed), RECT_HEIGHT(&rectProposed), SWP_NOACTIVATE | SWP_NOZORDER);
 
         // Save the proposed window rect dimensions here so we can adjust if the system comes back and changes them on what we asked for.
         ServiceLocator::LocateWindowMetrics<WindowMetrics>()->ConvertWindowRectToClientRect(&rectProposed);
@@ -183,7 +156,7 @@ using namespace Microsoft::Console::Types;
         // signal to uia that they can disconnect our uia provider
         if (_pUiaProvider)
         {
-            UiaReturnRawElementProvider(hWnd, 0, 0, NULL);
+            UiaReturnRawElementProvider(hWnd, 0, 0, nullptr);
         }
         break;
     }
@@ -213,7 +186,7 @@ using namespace Microsoft::Console::Types;
         // Now we need to get what the font size *would be* if we had this new DPI. We need to ask the renderer about that.
         const FontInfo& fiCurrent = ScreenInfo.GetCurrentFont();
         FontInfoDesired fiDesired(fiCurrent);
-        FontInfo fiProposed(nullptr, 0, 0, { 0, 0 }, 0);
+        FontInfo fiProposed(L"", 0, 0, { 0, 0 }, 0);
 
         const HRESULT hr = g.pRender->GetProposedFont(dpiProposed, fiDesired, fiProposed);
         // fiProposal will be updated by the renderer for this new font.
@@ -242,10 +215,7 @@ using namespace Microsoft::Console::Types;
         pSuggestionSize->cy = RECT_HEIGHT(&rectProposed);
 
         // Format our final suggestion for consumption.
-        if (Unlock)
-        {
-            UnlockConsole();
-        }
+        UnlockConsole();
         return TRUE;
     }
 
@@ -329,7 +299,7 @@ using namespace Microsoft::Console::Types;
         // check if we're minimized (iconic) and set our internal state flags accordingly.
         // http://msdn.microsoft.com/en-us/library/windows/desktop/dd162483(v=vs.85).aspx
         // NOTE: We will not get called to paint ourselves when minimized because we set an icon when registering the window class.
-        //       That means this CONSOLE_IS_ICONIC is unnnecessary when/if we can decouple the drawing with D2D.
+        //       That means this CONSOLE_IS_ICONIC is unnecessary when/if we can decouple the drawing with D2D.
         if (IsIconic(hWnd))
         {
             WI_SetFlag(gci.Flags, CONSOLE_IS_ICONIC);
@@ -367,13 +337,7 @@ using namespace Microsoft::Console::Types;
 
     case WM_SETTINGCHANGE:
     {
-        try
-        {
-            WindowTheme theme;
-            LOG_IF_FAILED(theme.TrySetDarkMode(hWnd));
-        }
-        CATCH_LOG();
-
+        LOG_IF_FAILED(Microsoft::Console::Internal::Theming::TrySetDarkMode(hWnd));
         gci.GetCursorBlinker().SettingsChanged();
     }
         __fallthrough;
@@ -516,11 +480,8 @@ using namespace Microsoft::Console::Types;
         {
             HMENU hHeirMenu = Menu::s_GetHeirMenuHandle();
 
-            if (Unlock)
-            {
-                Unlock = FALSE;
-                UnlockConsole();
-            }
+            Unlock = FALSE;
+            UnlockConsole();
 
             TrackPopupMenuEx(hHeirMenu,
                              TPM_RIGHTBUTTON | (GetSystemMetrics(SM_MENUDROPALIGNMENT) == 0 ? TPM_LEFTALIGN : TPM_RIGHTALIGN),
@@ -542,11 +503,8 @@ using namespace Microsoft::Console::Types;
         switch (wParam & 0x00FF)
         {
         case HTCAPTION:
-            if (Unlock)
-            {
-                UnlockConsole();
-                Unlock = FALSE;
-            }
+            UnlockConsole();
+            Unlock = FALSE;
             SetActiveWindow(hWnd);
             SendMessageTimeoutW(hWnd, WM_SYSCOMMAND, SC_MOVE | wParam, lParam, SMTO_NORMAL, INFINITE, nullptr);
             break;
@@ -712,11 +670,8 @@ using namespace Microsoft::Console::Types;
 
     case CM_BEEP:
     {
-        if (Unlock)
-        {
-            UnlockConsole();
-            Unlock = FALSE;
-        }
+        UnlockConsole();
+        Unlock = FALSE;
 
         // Don't fall back to Beep() on win32 systems -- if the user configures their system for no sound, we should
         // respect that.
@@ -740,7 +695,7 @@ using namespace Microsoft::Console::Types;
     {
         // Re-read the edit key settings from registry.
         Registry reg(&gci);
-        reg.GetEditKeys(NULL);
+        reg.GetEditKeys(nullptr);
         break;
     }
 

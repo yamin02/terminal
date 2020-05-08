@@ -24,7 +24,6 @@ namespace Microsoft::Console::Render
     {
     public:
         Xterm256Engine(_In_ wil::unique_hfile hPipe,
-                       wil::shared_event shutdownEvent,
                        const Microsoft::Console::IDefaultColorProvider& colorProvider,
                        const Microsoft::Console::Types::Viewport initialViewport,
                        _In_reads_(cColorTable) const COLORREF* const ColorTable,
@@ -35,12 +34,21 @@ namespace Microsoft::Console::Render
         [[nodiscard]] HRESULT UpdateDrawingBrushes(const COLORREF colorForeground,
                                                    const COLORREF colorBackground,
                                                    const WORD legacyColorAttribute,
-                                                   const bool isBold,
+                                                   const ExtendedAttributes extendedAttrs,
                                                    const bool isSettingDefaultBrushes) noexcept override;
 
+        [[nodiscard]] HRESULT ManuallyClearScrollback() noexcept override;
+
     private:
+        [[nodiscard]] HRESULT _UpdateExtendedAttrs(const ExtendedAttributes extendedAttrs) noexcept;
+
+        // We're only using Italics, Blinking, Invisible and Crossed Out for now
+        // See GH#2916 for adding a more complete implementation.
+        ExtendedAttributes _lastExtendedAttrsState;
+
 #ifdef UNIT_TESTING
         friend class VtRendererTest;
+        friend class ConptyOutputTests;
 #endif
     };
 }

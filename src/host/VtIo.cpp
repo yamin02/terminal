@@ -11,7 +11,7 @@
 
 #include "../renderer/base/renderer.hpp"
 #include "../types/inc/utils.hpp"
-#include "handle.h" // LockConsole and UnlockConsole
+#include "input.h" // ProcessCtrlEvents
 #include "output.h" // CloseConsoleProcessState
 
 using namespace Microsoft::Console;
@@ -25,22 +25,8 @@ VtIo::VtIo() :
     _initialized(false),
     _objectsCreated(false),
     _lookingForCursorPosition(false),
-    _IoMode(VtIoMode::INVALID),
-#ifdef UNIT_TESTING
-    _doNotTerminate(false),
-#endif
-    _shutdownEvent()
+    _IoMode(VtIoMode::INVALID)
 {
-}
-
-VtIo::~VtIo()
-{
-    if (_shutdownEvent)
-    {
-        _shutdownEvent.SetEvent();
-        // Wait for watchdog future to get the memo or we might try to destroy it before it gets to work.
-        _shutdownWatchdog.wait();
-    }
 }
 
 // Routine Description:
@@ -49,7 +35,7 @@ VtIo::~VtIo()
 // Arguments:
 //  VtIoMode: A string containing the console's requested VT mode. This can be
 //      any of the strings in VtIoModes.hpp
-//  pIoMode: recieves the VtIoMode that the string prepresents if it's a valid
+//  pIoMode: receives the VtIoMode that the string represents if it's a valid
 //      IO mode string
 // Return Value:
 //  S_OK if we parsed the string successfully, otherwise E_INVALIDARG indicating failure.
@@ -87,6 +73,7 @@ VtIo::~VtIo()
 [[nodiscard]] HRESULT VtIo::Initialize(const ConsoleArguments* const pArgs)
 {
     _lookingForCursorPosition = pArgs->GetInheritCursor();
+    _resizeQuirk = pArgs->IsResizeQuirkEnabled();
 
     // If we were already given VT handles, set up the VT IO engine to use those.
     if (pArgs->InConptyMode())
@@ -131,35 +118,9 @@ VtIo::~VtIo()
     _hOutput.reset(OutHandle);
     _hSignal.reset(SignalHandle);
 
-    // Since we have a valid request for a PTY, set up the events and watchdog mechanisms
-    // required to tear everything apart correctly at the end of a PTY session.
-    _shutdownEvent.create(wil::EventOptions::ManualReset);
-
-    _shutdownWatchdog = std::async(std::launch::async, [=] {
-        _shutdownEvent.wait();
-
-        LockConsole();
-        auto Unlock = wil::scope_exit([&] { UnlockConsole(); });
-
-#ifdef UNIT_TESTING
-        // Don't close process state if we're unit testing and this has been set by a friend because
-        // it will trigger the rundown and exit TerminateProcess killing the test host!
-        if (_doNotTerminate)
-        {
-            return;
-        }
-#endif
-
-        CloseConsoleProcessState();
-    });
-
-    // We also need to register to know when the last process is exiting.
-    ServiceLocator::LocateGlobals().getConsoleInformation().ProcessHandleList.RegisterForNotifyOnLastFree(std::bind(&VtIo::_OnLastProcessExit, this));
-
     // The only way we're initialized is if the args said we're in conpty mode.
     // If the args say so, then at least one of in, out, or signal was specified
     _initialized = true;
-
     return S_OK;
 }
 
@@ -186,7 +147,7 @@ VtIo::~VtIo()
     {
         if (IsValidHandle(_hInput.get()))
         {
-            _pVtInputThread = std::make_unique<VtInputThread>(std::move(_hInput), _shutdownEvent, _lookingForCursorPosition);
+            _pVtInputThread = std::make_unique<VtInputThread>(std::move(_hInput), _lookingForCursorPosition);
         }
 
         if (IsValidHandle(_hOutput.get()))
@@ -198,7 +159,6 @@ VtIo::~VtIo()
             {
             case VtIoMode::XTERM_256:
                 _pVtRenderEngine = std::make_unique<Xterm256Engine>(std::move(_hOutput),
-                                                                    _shutdownEvent,
                                                                     gci,
                                                                     initialViewport,
                                                                     gci.GetColorTable(),
@@ -206,7 +166,6 @@ VtIo::~VtIo()
                 break;
             case VtIoMode::XTERM:
                 _pVtRenderEngine = std::make_unique<XtermEngine>(std::move(_hOutput),
-                                                                 _shutdownEvent,
                                                                  gci,
                                                                  initialViewport,
                                                                  gci.GetColorTable(),
@@ -215,7 +174,6 @@ VtIo::~VtIo()
                 break;
             case VtIoMode::XTERM_ASCII:
                 _pVtRenderEngine = std::make_unique<XtermEngine>(std::move(_hOutput),
-                                                                 _shutdownEvent,
                                                                  gci,
                                                                  initialViewport,
                                                                  gci.GetColorTable(),
@@ -224,7 +182,6 @@ VtIo::~VtIo()
                 break;
             case VtIoMode::WIN_TELNET:
                 _pVtRenderEngine = std::make_unique<WinTelnetEngine>(std::move(_hOutput),
-                                                                     _shutdownEvent,
                                                                      gci,
                                                                      initialViewport,
                                                                      gci.GetColorTable(),
@@ -232,6 +189,11 @@ VtIo::~VtIo()
                 break;
             default:
                 return E_FAIL;
+            }
+            if (_pVtRenderEngine)
+            {
+                _pVtRenderEngine->SetTerminalOwner(this);
+                _pVtRenderEngine->SetResizeQuirk(_resizeQuirk);
             }
         }
     }
@@ -285,29 +247,18 @@ bool VtIo::IsUsingVt() const
     // We need both handles for this initialization to work. If we don't have
     //      both, we'll skip it. They either aren't going to be reading output
     //      (so they can't get the DSR) or they can't write the response to us.
-    // GH Microsoft/Terminal#1810:
-    // - We can't just infinite loop and let them hang. It needs to recognize an error
-    //   condition otherwise it can be getting notified on another thread of a proper shutdown
-    //   and be unable to actually leave this loop and let go of the lock.
     if (_lookingForCursorPosition && _pVtRenderEngine && _pVtInputThread)
     {
-        RETURN_IF_FAILED(_pVtRenderEngine->RequestCursor());
-
-        // The consequences of the VT Input
-        // receiving its cursor position information cause additional entrances to the global
-        // lock that we're already holding on the IO thread as a part of initialization here.
-        // So we have to pump the read manually here until we get what we're looking for.
-        while (!_shutdownEvent.is_signaled() && _lookingForCursorPosition)
+        LOG_IF_FAILED(_pVtRenderEngine->RequestCursor());
+        while (_lookingForCursorPosition)
         {
-            RETURN_IF_FAILED(_pVtInputThread->DoReadInput());
+            _pVtInputThread->DoReadInput(false);
         }
     }
 
-    // We can't start the VT input thread until after we've pumped it manually
-    // (if necessary) above for the cursor response.
     if (_pVtInputThread)
     {
-        RETURN_IF_FAILED(_pVtInputThread->Start());
+        LOG_IF_FAILED(_pVtInputThread->Start());
     }
 
     if (_pPtySignalInputThread)
@@ -344,7 +295,7 @@ bool VtIo::IsUsingVt() const
     {
         try
         {
-            _pPtySignalInputThread = std::make_unique<PtySignalInputThread>(std::move(_hSignal), _shutdownEvent);
+            _pPtySignalInputThread = std::make_unique<PtySignalInputThread>(std::move(_hSignal));
 
             // Start it if it was successfully created.
             RETURN_IF_FAILED(_pPtySignalInputThread->Start());
@@ -396,6 +347,59 @@ bool VtIo::IsUsingVt() const
     return hr;
 }
 
+void VtIo::CloseInput()
+{
+    // This will release the lock when it goes out of scope
+    std::lock_guard<std::mutex> lk(_shutdownLock);
+    _pVtInputThread = nullptr;
+    _ShutdownIfNeeded();
+}
+
+void VtIo::CloseOutput()
+{
+    // This will release the lock when it goes out of scope
+    std::lock_guard<std::mutex> lk(_shutdownLock);
+
+    Globals& g = ServiceLocator::LocateGlobals();
+    // DON'T RemoveRenderEngine, as that requires the engine list lock, and this
+    // is usually being triggered on a paint operation, when the lock is already
+    // owned by the paint.
+    // Instead we're releasing the Engine here. A pointer to it has already been
+    // given to the Renderer, so we don't want the unique_ptr to delete it. The
+    // Renderer will own its lifetime now.
+    _pVtRenderEngine.release();
+
+    g.getConsoleInformation().GetActiveOutputBuffer().SetTerminalConnection(nullptr);
+
+    _ShutdownIfNeeded();
+}
+
+void VtIo::_ShutdownIfNeeded()
+{
+    // The callers should have both acquired the _shutdownLock at this point -
+    //      we dont want a race on who is actually responsible for closing it.
+    if (_objectsCreated && _pVtInputThread == nullptr && _pVtRenderEngine == nullptr)
+    {
+        // At this point, we no longer have a renderer or inthread. So we've
+        //      effectively been disconnected from the terminal.
+
+        // If we have any remaining attached processes, this will prepare us to send a ctrl+close to them
+        // if we don't, this will cause us to rundown and exit.
+        CloseConsoleProcessState();
+
+        // If we haven't terminated by now, that's because there's a client that's still attached.
+        // Force the handling of the control events by the attached clients.
+        // As of MSFT:19419231, CloseConsoleProcessState will make sure this
+        //      happens if this method is called outside of lock, but if we're
+        //      currently locked, we want to make sure ctrl events are handled
+        //      _before_ we RundownAndExit.
+        ProcessCtrlEvents();
+
+        // Make sure we terminate.
+        ServiceLocator::RundownAndExit(ERROR_BROKEN_PIPE);
+    }
+}
+
 // Method Description:
 // - Tell the vt renderer to begin a resize operation. During a resize
 //   operation, the vt renderer should _not_ request to be repainted during a
@@ -430,27 +434,53 @@ void VtIo::EndResize()
     }
 }
 
+#ifdef UNIT_TESTING
 // Method Description:
-// - Called when the last client process exits. We'll use this to shut off the main IO thread.
+// - This is a test helper method. It can be used to trick VtIo into responding
+//   true to `IsUsingVt`, which will cause the console host to act in conpty
+//   mode.
+// Arguments:
+// - vtRenderEngine: a VT renderer that our VtIo should use as the vt engine during these tests
+// Return Value:
+// - <none>
+void VtIo::EnableConptyModeForTests(std::unique_ptr<Microsoft::Console::Render::VtEngine> vtRenderEngine)
+{
+    _objectsCreated = true;
+    _pVtRenderEngine = std::move(vtRenderEngine);
+}
+#endif
+
+// Method Description:
+// - Returns true if the Resize Quirk is enabled. This changes the behavior of
+//   conpty to _not_ InvalidateAll the entire viewport on a resize operation.
+//   This is used by the Windows Terminal, because it is prepared to be
+//   connected to a conpty, and handles it's own buffer specifically for a
+//   conpty scenario.
+// - See also: GH#3490, #4354, #4741
 // Arguments:
 // - <none>
 // Return Value:
-// - <none>
-void VtIo::_OnLastProcessExit()
+// - true iff we were started with the `--resizeQuirk` flag enabled.
+bool VtIo::IsResizeQuirkEnabled() const
 {
-    // If a shutdown is signaled because one of the PTY pipes has broken connection with the
-    // hosting Terminal on top and we've been notified that the last client application has just
-    // disconnected, then we want to stop all IO channel communication.
-    //
-    // Normally IO channel communication stops itself when all outstanding references to the console
-    // session are broken with the driver, but in this circumstance, the Terminal application may still
-    // be holding a server, reference, or other handle to the session. It is implied that breaking any
-    // one of the connections or calling ClosePseudoConsole is a specific request to close all those things off from the
-    // Terminal's end. That means those handles are not really valid means of keeping the session open and therefore
-    // once the client connections are gone, there's no longer a reason to stick around even if the Terminal on top
-    // didn't fully clean up all of its handles before reaching this state.
-    if (_shutdownEvent.is_signaled())
+    return _resizeQuirk;
+}
+
+// Method Description:
+// - Manually tell the renderer that it should emit a "Erase Scrollback"
+//   sequence to the connected terminal. We need to do this in certain cases
+//   that we've identified where we believe the client wanted the entire
+//   terminal buffer cleared, not just the viewport. For more information, see
+//   GH#3126.
+// Arguments:
+// - <none>
+// Return Value:
+// - S_OK if we wrote the sequences successfully, otherwise an appropriate HRESULT
+[[nodiscard]] HRESULT VtIo::ManuallyClearScrollback() const noexcept
+{
+    if (_pVtRenderEngine)
     {
-        ServiceLocator::LocateGlobals().pDeviceComm->Shutdown();
+        return _pVtRenderEngine->ManuallyClearScrollback();
     }
+    return S_OK;
 }

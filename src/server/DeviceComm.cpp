@@ -5,21 +5,13 @@
 #include "DeviceComm.h"
 
 DeviceComm::DeviceComm(_In_ HANDLE Server) :
-    _Server(Server),
-    _shutdown(false)
+    _Server(Server)
 {
     THROW_HR_IF(E_HANDLE, Server == INVALID_HANDLE_VALUE);
 }
 
 DeviceComm::~DeviceComm()
 {
-}
-
-// Routine Description:
-// - Intentionally shut down our communications channel
-void DeviceComm::Shutdown()
-{
-    _shutdown = true;
 }
 
 // Routine Description:
@@ -42,24 +34,13 @@ void DeviceComm::Shutdown()
 // Routine Description:
 // - Retrieves a packet message from the driver representing the next action/activity that should be performed.
 // Arguments:
-// - pCompletion - Optional completion structure from the previous activity (can be used in lieu of calling CompleteIo seperately.)
+// - pCompletion - Optional completion structure from the previous activity (can be used in lieu of calling CompleteIo separately.)
 // - pMessage - A structure to hold the message data retrieved from the driver.
 // Return Value:
 // - HRESULT S_OK or suitable error.
 [[nodiscard]] HRESULT DeviceComm::ReadIo(_In_opt_ PCONSOLE_API_MSG const pReplyMsg,
                                          _Out_ CONSOLE_API_MSG* const pMessage) const
 {
-    // If we've been told to shutdown, we should allow a reply to go through to finish things off,
-    // but no more reads of new messages are allowed.
-    if (_shutdown)
-    {
-        if (pReplyMsg)
-        {
-            LOG_IF_FAILED(CompleteIo(&pReplyMsg->Complete));
-        }
-        return E_APPLICATION_EXITING;
-    }
-
     HRESULT hr = _CallIoctl(IOCTL_CONDRV_READ_IO,
                             pReplyMsg == nullptr ? nullptr : &pReplyMsg->Complete,
                             pReplyMsg == nullptr ? 0 : sizeof(pReplyMsg->Complete),
@@ -78,7 +59,7 @@ void DeviceComm::Shutdown()
 // Routine Description:
 // - Marks an action/activity as completed to the driver so control/responses can be returned to the client application.
 // Arguments:
-// - pCompletion - Completion structure from the previous activity (can be used in lieu of calling CompleteIo seperately.)
+// - pCompletion - Completion structure from the previous activity (can be used in lieu of calling CompleteIo separately.)
 // Return Value:
 // - HRESULT S_OK or suitable error.
 [[nodiscard]] HRESULT DeviceComm::CompleteIo(_In_ CD_IO_COMPLETE* const pCompletion) const

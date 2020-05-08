@@ -21,10 +21,14 @@ Author(s):
 
 #pragma once
 
-#include "precomp.h"
 #include "../buffer/out/textBuffer.hpp"
 #include "UiaTextRangeBase.hpp"
 #include "IUiaData.h"
+#include "IUiaTraceable.h"
+
+#include <UIAutomationCore.h>
+
+#include <wrl/implements.h>
 
 namespace Microsoft::Console::Types
 {
@@ -32,27 +36,20 @@ namespace Microsoft::Console::Types
     class Viewport;
 
     class ScreenInfoUiaProviderBase :
-        public IRawElementProviderSimple,
-        public IRawElementProviderFragment,
-        public ITextProvider
+        public WRL::RuntimeClass<WRL::RuntimeClassFlags<WRL::ClassicCom | WRL::InhibitFtmBase>, IRawElementProviderSimple, IRawElementProviderFragment, ITextProvider>,
+        public IUiaTraceable
     {
     public:
-        ScreenInfoUiaProviderBase(_In_ IUiaData* pData);
-        ScreenInfoUiaProviderBase(const ScreenInfoUiaProviderBase&) = default;
-        ScreenInfoUiaProviderBase(ScreenInfoUiaProviderBase&&) = default;
-        ScreenInfoUiaProviderBase& operator=(const ScreenInfoUiaProviderBase&) = default;
-        ScreenInfoUiaProviderBase& operator=(ScreenInfoUiaProviderBase&&) = default;
-        virtual ~ScreenInfoUiaProviderBase() = default;
+        virtual HRESULT RuntimeClassInitialize(_In_ IUiaData* pData, _In_ std::wstring_view wordDelimiters = UiaTextRangeBase::DefaultWordDelimiter) noexcept;
+
+        ScreenInfoUiaProviderBase(const ScreenInfoUiaProviderBase&) = delete;
+        ScreenInfoUiaProviderBase(ScreenInfoUiaProviderBase&&) = delete;
+        ScreenInfoUiaProviderBase& operator=(const ScreenInfoUiaProviderBase&) = delete;
+        ScreenInfoUiaProviderBase& operator=(ScreenInfoUiaProviderBase&&) = delete;
+        ~ScreenInfoUiaProviderBase() = default;
 
         [[nodiscard]] HRESULT Signal(_In_ EVENTID id);
-
-        // IUnknown methods
-        IFACEMETHODIMP_(ULONG)
-        AddRef() override;
-        IFACEMETHODIMP_(ULONG)
-        Release() override;
-        IFACEMETHODIMP QueryInterface(_In_ REFIID riid,
-                                      _COM_Outptr_result_maybenull_ void** ppInterface) override;
+        virtual void ChangeViewport(const SMALL_RECT NewWindow) = 0;
 
         // IRawElementProviderSimple methods
         IFACEMETHODIMP get_ProviderOptions(_Out_ ProviderOptions* pOptions) noexcept override;
@@ -82,32 +79,38 @@ namespace Microsoft::Console::Types
         IFACEMETHODIMP get_SupportedTextSelection(_Out_ SupportedTextSelection* pRetVal) noexcept override;
 
     protected:
-        virtual std::deque<UiaTextRangeBase*> GetSelectionRanges(_In_ IRawElementProviderSimple* pProvider) = 0;
+        ScreenInfoUiaProviderBase() = default;
+
+        virtual HRESULT GetSelectionRange(_In_ IRawElementProviderSimple* pProvider, const std::wstring_view wordDelimiters, _COM_Outptr_result_maybenull_ UiaTextRangeBase** ppUtr) = 0;
 
         // degenerate range
-        virtual UiaTextRangeBase* CreateTextRange(_In_ IRawElementProviderSimple* const pProvider) = 0;
+        virtual HRESULT CreateTextRange(_In_ IRawElementProviderSimple* const pProvider, const std::wstring_view wordDelimiters, _COM_Outptr_result_maybenull_ UiaTextRangeBase** ppUtr) = 0;
 
         // degenerate range at cursor position
-        virtual UiaTextRangeBase* CreateTextRange(_In_ IRawElementProviderSimple* const pProvider,
-                                                  const Cursor& cursor) = 0;
+        virtual HRESULT CreateTextRange(_In_ IRawElementProviderSimple* const pProvider,
+                                        const Cursor& cursor,
+                                        const std::wstring_view wordDelimiters,
+                                        _COM_Outptr_result_maybenull_ UiaTextRangeBase** ppUtr) = 0;
 
         // specific endpoint range
-        virtual UiaTextRangeBase* CreateTextRange(_In_ IRawElementProviderSimple* const pProvider,
-                                                  const Endpoint start,
-                                                  const Endpoint end,
-                                                  const bool degenerate) = 0;
+        virtual HRESULT CreateTextRange(_In_ IRawElementProviderSimple* const pProvider,
+                                        const COORD start,
+                                        const COORD end,
+                                        const std::wstring_view wordDelimiters,
+                                        _COM_Outptr_result_maybenull_ UiaTextRangeBase** ppUtr) = 0;
 
         // range from a UiaPoint
-        virtual UiaTextRangeBase* CreateTextRange(_In_ IRawElementProviderSimple* const pProvider,
-                                                  const UiaPoint point) = 0;
+        virtual HRESULT CreateTextRange(_In_ IRawElementProviderSimple* const pProvider,
+                                        const UiaPoint point,
+                                        const std::wstring_view wordDelimiters,
+                                        _COM_Outptr_result_maybenull_ UiaTextRangeBase** ppUtr) = 0;
 
-        // weak reference to IRenderData
-        IUiaData* _pData;
+        // weak reference to IUiaData
+        IUiaData* _pData{ nullptr };
+
+        std::wstring _wordDelimiters{};
 
     private:
-        // Ref counter for COM object
-        ULONG _cRefs;
-
         // this is used to prevent the object from
         // signaling an event while it is already in the
         // process of signalling another event.
@@ -119,7 +122,7 @@ namespace Microsoft::Console::Types
         // eventually overflowing the stack.
         // We aren't using this as a cheap locking
         // mechanism for multi-threaded code.
-        std::map<EVENTID, bool> _signalFiringMapping;
+        std::map<EVENTID, bool> _signalFiringMapping{};
 
         const COORD _getScreenBufferCoords() const;
         const TextBuffer& _getTextBuffer() const noexcept;
@@ -127,52 +130,4 @@ namespace Microsoft::Console::Types
         void _LockConsole() noexcept;
         void _UnlockConsole() noexcept;
     };
-
-    namespace ScreenInfoUiaProviderTracing
-    {
-        enum class ApiCall
-        {
-            Constructor,
-            Signal,
-            AddRef,
-            Release,
-            QueryInterface,
-            GetProviderOptions,
-            GetPatternProvider,
-            GetPropertyValue,
-            GetHostRawElementProvider,
-            Navigate,
-            GetRuntimeId,
-            GetBoundingRectangle,
-            GetEmbeddedFragmentRoots,
-            SetFocus,
-            GetFragmentRoot,
-            GetSelection,
-            GetVisibleRanges,
-            RangeFromChild,
-            RangeFromPoint,
-            GetDocumentRange,
-            GetSupportedTextSelection
-        };
-
-        struct IApiMsg
-        {
-        };
-
-        struct ApiMsgSignal : public IApiMsg
-        {
-            EVENTID Signal;
-        };
-
-        struct ApiMsgNavigate : public IApiMsg
-        {
-            NavigateDirection Direction;
-        };
-
-        struct ApiMsgGetSelection : public IApiMsg
-        {
-            bool AreaSelected;
-            unsigned int SelectionRowCount;
-        };
-    }
 }

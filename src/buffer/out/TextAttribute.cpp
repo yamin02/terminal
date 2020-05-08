@@ -44,7 +44,7 @@ COLORREF TextAttribute::CalculateRgbBackground(std::basic_string_view<COLORREF> 
 COLORREF TextAttribute::_GetRgbForeground(std::basic_string_view<COLORREF> colorTable,
                                           COLORREF defaultColor) const noexcept
 {
-    return _foreground.GetColor(colorTable, defaultColor, _isBold);
+    return _foreground.GetColor(colorTable, defaultColor, IsBold());
 }
 
 // Routine Description:
@@ -155,16 +155,6 @@ void TextAttribute::SetColor(const COLORREF rgbColor, const bool fIsForeground) 
     }
 }
 
-bool TextAttribute::IsBold() const noexcept
-{
-    return _isBold;
-}
-
-bool TextAttribute::_IsReverseVideo() const noexcept
-{
-    return WI_IsFlagSet(_wAttrLegacy, COMMON_LVB_REVERSE_VIDEO);
-}
-
 bool TextAttribute::IsLeadingByte() const noexcept
 {
     return WI_IsFlagSet(_wAttrLegacy, COMMON_LVB_LEADING_BYTE);
@@ -215,6 +205,11 @@ void TextAttribute::Debolden() noexcept
     _SetBoldness(false);
 }
 
+void TextAttribute::SetExtendedAttributes(const ExtendedAttributes attrs) noexcept
+{
+    _extendedAttrs = attrs;
+}
+
 // Routine Description:
 // - swaps foreground and background color
 void TextAttribute::Invert() noexcept
@@ -224,7 +219,7 @@ void TextAttribute::Invert() noexcept
 
 void TextAttribute::_SetBoldness(const bool isBold) noexcept
 {
-    _isBold = isBold;
+    WI_UpdateFlag(_extendedAttrs, ExtendedAttributes::Bold, isBold);
 }
 
 void TextAttribute::SetDefaultForeground() noexcept
@@ -265,4 +260,13 @@ bool TextAttribute::ForegroundIsDefault() const noexcept
 bool TextAttribute::BackgroundIsDefault() const noexcept
 {
     return _background.IsDefault();
+}
+
+// Routine Description:
+// - Resets the meta and extended attributes, which is what the VT standard
+//      requires for most erasing and filling operations.
+void TextAttribute::SetStandardErase() noexcept
+{
+    SetExtendedAttributes(ExtendedAttributes::Normal);
+    SetMetaAttributes(0);
 }

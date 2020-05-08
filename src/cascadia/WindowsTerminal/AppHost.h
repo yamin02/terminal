@@ -17,16 +17,23 @@ public:
     void AppTitleChanged(const winrt::Windows::Foundation::IInspectable& sender, winrt::hstring newTitle);
     void LastTabClosed(const winrt::Windows::Foundation::IInspectable& sender, const winrt::TerminalApp::LastTabClosedEventArgs& args);
     void Initialize();
+    bool OnF7Pressed();
 
 private:
     bool _useNonClientArea;
 
     std::unique_ptr<IslandWindow> _window;
     winrt::TerminalApp::App _app;
+    winrt::TerminalApp::AppLogic _logic;
 
-    void _HandleCreateWindow(const HWND hwnd, const RECT proposedRect);
+    void _HandleCommandlineArgs();
+
+    void _HandleCreateWindow(const HWND hwnd, RECT proposedRect, winrt::TerminalApp::LaunchMode& launchMode);
     void _UpdateTitleBarContent(const winrt::Windows::Foundation::IInspectable& sender,
                                 const winrt::Windows::UI::Xaml::UIElement& arg);
-    void _UpdateTheme(const winrt::TerminalApp::App&,
+    void _UpdateTheme(const winrt::Windows::Foundation::IInspectable&,
                       const winrt::Windows::UI::Xaml::ElementTheme& arg);
+    void _ToggleFullscreen(const winrt::Windows::Foundation::IInspectable& sender,
+                           const winrt::TerminalApp::ToggleFullscreenEventArgs& arg);
+    void _WindowMouseWheeled(const til::point coord, const int32_t delta);
 };

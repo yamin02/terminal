@@ -8,6 +8,7 @@
 
 #include "pch.h"
 #include "AppKeyBindings.h"
+#include "ActionAndArgs.h"
 #include "KeyChordSerialization.h"
 #include "Utils.h"
 #include "JsonUtils.h"
@@ -18,25 +19,16 @@ using namespace winrt::TerminalApp;
 
 static constexpr std::string_view KeysKey{ "keys" };
 static constexpr std::string_view CommandKey{ "command" };
+static constexpr std::string_view ActionKey{ "action" };
 
 // This key is reserved to remove a keybinding, instead of mapping it to an action.
 static constexpr std::string_view UnboundKey{ "unbound" };
 
 static constexpr std::string_view CopyTextKey{ "copy" };
-static constexpr std::string_view CopyTextWithoutNewlinesKey{ "copyTextWithoutNewlines" };
 static constexpr std::string_view PasteTextKey{ "paste" };
-static constexpr std::string_view NewTabKey{ "newTab" };
 static constexpr std::string_view OpenNewTabDropdownKey{ "openNewTabDropdown" };
 static constexpr std::string_view DuplicateTabKey{ "duplicateTab" };
-static constexpr std::string_view NewTabWithProfile0Key{ "newTabProfile0" };
-static constexpr std::string_view NewTabWithProfile1Key{ "newTabProfile1" };
-static constexpr std::string_view NewTabWithProfile2Key{ "newTabProfile2" };
-static constexpr std::string_view NewTabWithProfile3Key{ "newTabProfile3" };
-static constexpr std::string_view NewTabWithProfile4Key{ "newTabProfile4" };
-static constexpr std::string_view NewTabWithProfile5Key{ "newTabProfile5" };
-static constexpr std::string_view NewTabWithProfile6Key{ "newTabProfile6" };
-static constexpr std::string_view NewTabWithProfile7Key{ "newTabProfile7" };
-static constexpr std::string_view NewTabWithProfile8Key{ "newTabProfile8" };
+static constexpr std::string_view NewTabKey{ "newTab" };
 static constexpr std::string_view NewWindowKey{ "newWindow" };
 static constexpr std::string_view CloseWindowKey{ "closeWindow" };
 static constexpr std::string_view CloseTabKey{ "closeTab" };
@@ -44,32 +36,19 @@ static constexpr std::string_view ClosePaneKey{ "closePane" };
 static constexpr std::string_view SwitchtoTabKey{ "switchToTab" };
 static constexpr std::string_view NextTabKey{ "nextTab" };
 static constexpr std::string_view PrevTabKey{ "prevTab" };
-static constexpr std::string_view IncreaseFontSizeKey{ "increaseFontSize" };
-static constexpr std::string_view DecreaseFontSizeKey{ "decreaseFontSize" };
+static constexpr std::string_view AdjustFontSizeKey{ "adjustFontSize" };
+static constexpr std::string_view ResetFontSizeKey{ "resetFontSize" };
 static constexpr std::string_view ScrollupKey{ "scrollUp" };
 static constexpr std::string_view ScrolldownKey{ "scrollDown" };
 static constexpr std::string_view ScrolluppageKey{ "scrollUpPage" };
 static constexpr std::string_view ScrolldownpageKey{ "scrollDownPage" };
-static constexpr std::string_view SwitchToTab0Key{ "switchToTab0" };
-static constexpr std::string_view SwitchToTab1Key{ "switchToTab1" };
-static constexpr std::string_view SwitchToTab2Key{ "switchToTab2" };
-static constexpr std::string_view SwitchToTab3Key{ "switchToTab3" };
-static constexpr std::string_view SwitchToTab4Key{ "switchToTab4" };
-static constexpr std::string_view SwitchToTab5Key{ "switchToTab5" };
-static constexpr std::string_view SwitchToTab6Key{ "switchToTab6" };
-static constexpr std::string_view SwitchToTab7Key{ "switchToTab7" };
-static constexpr std::string_view SwitchToTab8Key{ "switchToTab8" };
-static constexpr std::string_view OpenSettingsKey{ "openSettings" };
-static constexpr std::string_view SplitHorizontalKey{ "splitHorizontal" };
-static constexpr std::string_view SplitVerticalKey{ "splitVertical" };
-static constexpr std::string_view ResizePaneLeftKey{ "resizePaneLeft" };
-static constexpr std::string_view ResizePaneRightKey{ "resizePaneRight" };
-static constexpr std::string_view ResizePaneUpKey{ "resizePaneUp" };
-static constexpr std::string_view ResizePaneDownKey{ "resizePaneDown" };
-static constexpr std::string_view MoveFocusLeftKey{ "moveFocusLeft" };
-static constexpr std::string_view MoveFocusRightKey{ "moveFocusRight" };
-static constexpr std::string_view MoveFocusUpKey{ "moveFocusUp" };
-static constexpr std::string_view MoveFocusDownKey{ "moveFocusDown" };
+static constexpr std::string_view SwitchToTabKey{ "switchToTab" };
+static constexpr std::string_view OpenSettingsKey{ "openSettings" }; // TODO GH#2557: Add args for OpenSettings
+static constexpr std::string_view SplitPaneKey{ "splitPane" };
+static constexpr std::string_view ResizePaneKey{ "resizePane" };
+static constexpr std::string_view MoveFocusKey{ "moveFocus" };
+static constexpr std::string_view FindKey{ "find" };
+static constexpr std::string_view ToggleFullscreenKey{ "toggleFullscreen" };
 
 // Specifically use a map here over an unordered_map. We want to be able to
 // iterate over these entries in-order when we're serializing the keybindings.
@@ -81,58 +60,61 @@ static constexpr std::string_view MoveFocusDownKey{ "moveFocusDown" };
 // about here.
 static const std::map<std::string_view, ShortcutAction, std::less<>> commandNames{
     { CopyTextKey, ShortcutAction::CopyText },
-    { CopyTextWithoutNewlinesKey, ShortcutAction::CopyTextWithoutNewlines },
     { PasteTextKey, ShortcutAction::PasteText },
-    { NewTabKey, ShortcutAction::NewTab },
     { OpenNewTabDropdownKey, ShortcutAction::OpenNewTabDropdown },
     { DuplicateTabKey, ShortcutAction::DuplicateTab },
-    { NewTabWithProfile0Key, ShortcutAction::NewTabProfile0 },
-    { NewTabWithProfile1Key, ShortcutAction::NewTabProfile1 },
-    { NewTabWithProfile2Key, ShortcutAction::NewTabProfile2 },
-    { NewTabWithProfile3Key, ShortcutAction::NewTabProfile3 },
-    { NewTabWithProfile4Key, ShortcutAction::NewTabProfile4 },
-    { NewTabWithProfile5Key, ShortcutAction::NewTabProfile5 },
-    { NewTabWithProfile6Key, ShortcutAction::NewTabProfile6 },
-    { NewTabWithProfile7Key, ShortcutAction::NewTabProfile7 },
-    { NewTabWithProfile8Key, ShortcutAction::NewTabProfile8 },
+    { NewTabKey, ShortcutAction::NewTab },
     { NewWindowKey, ShortcutAction::NewWindow },
     { CloseWindowKey, ShortcutAction::CloseWindow },
     { CloseTabKey, ShortcutAction::CloseTab },
     { ClosePaneKey, ShortcutAction::ClosePane },
     { NextTabKey, ShortcutAction::NextTab },
     { PrevTabKey, ShortcutAction::PrevTab },
-    { IncreaseFontSizeKey, ShortcutAction::IncreaseFontSize },
-    { DecreaseFontSizeKey, ShortcutAction::DecreaseFontSize },
+    { AdjustFontSizeKey, ShortcutAction::AdjustFontSize },
+    { ResetFontSizeKey, ShortcutAction::ResetFontSize },
     { ScrollupKey, ShortcutAction::ScrollUp },
     { ScrolldownKey, ShortcutAction::ScrollDown },
     { ScrolluppageKey, ShortcutAction::ScrollUpPage },
     { ScrolldownpageKey, ShortcutAction::ScrollDownPage },
-    { SwitchToTab0Key, ShortcutAction::SwitchToTab0 },
-    { SwitchToTab1Key, ShortcutAction::SwitchToTab1 },
-    { SwitchToTab2Key, ShortcutAction::SwitchToTab2 },
-    { SwitchToTab3Key, ShortcutAction::SwitchToTab3 },
-    { SwitchToTab4Key, ShortcutAction::SwitchToTab4 },
-    { SwitchToTab5Key, ShortcutAction::SwitchToTab5 },
-    { SwitchToTab6Key, ShortcutAction::SwitchToTab6 },
-    { SwitchToTab7Key, ShortcutAction::SwitchToTab7 },
-    { SwitchToTab8Key, ShortcutAction::SwitchToTab8 },
-    { SplitHorizontalKey, ShortcutAction::SplitHorizontal },
-    { SplitVerticalKey, ShortcutAction::SplitVertical },
-    { ResizePaneLeftKey, ShortcutAction::ResizePaneLeft },
-    { ResizePaneRightKey, ShortcutAction::ResizePaneRight },
-    { ResizePaneUpKey, ShortcutAction::ResizePaneUp },
-    { ResizePaneDownKey, ShortcutAction::ResizePaneDown },
-    { MoveFocusLeftKey, ShortcutAction::MoveFocusLeft },
-    { MoveFocusRightKey, ShortcutAction::MoveFocusRight },
-    { MoveFocusUpKey, ShortcutAction::MoveFocusUp },
-    { MoveFocusDownKey, ShortcutAction::MoveFocusDown },
+    { SwitchToTabKey, ShortcutAction::SwitchToTab },
+    { ResizePaneKey, ShortcutAction::ResizePane },
+    { MoveFocusKey, ShortcutAction::MoveFocus },
     { OpenSettingsKey, ShortcutAction::OpenSettings },
+    { ToggleFullscreenKey, ShortcutAction::ToggleFullscreen },
+    { SplitPaneKey, ShortcutAction::SplitPane },
     { UnboundKey, ShortcutAction::Invalid },
+    { FindKey, ShortcutAction::Find },
+};
+
+using ParseResult = std::tuple<IActionArgs, std::vector<TerminalApp::SettingsLoadWarnings>>;
+using ParseActionFunction = std::function<ParseResult(const Json::Value&)>;
+
+// This is a map of ShortcutAction->function<IActionArgs(Json::Value)>. It holds
+// a set of deserializer functions that can be used to deserialize a IActionArgs
+// from json. Each type of IActionArgs that can accept arbitrary args should be
+// placed into this map, with the corresponding deserializer function as the
+// value.
+static const std::map<ShortcutAction, ParseActionFunction, std::less<>> argParsers{
+    { ShortcutAction::CopyText, winrt::TerminalApp::implementation::CopyTextArgs::FromJson },
+
+    { ShortcutAction::NewTab, winrt::TerminalApp::implementation::NewTabArgs::FromJson },
+
+    { ShortcutAction::SwitchToTab, winrt::TerminalApp::implementation::SwitchToTabArgs::FromJson },
+
+    { ShortcutAction::ResizePane, winrt::TerminalApp::implementation::ResizePaneArgs::FromJson },
+
+    { ShortcutAction::MoveFocus, winrt::TerminalApp::implementation::MoveFocusArgs::FromJson },
+
+    { ShortcutAction::AdjustFontSize, winrt::TerminalApp::implementation::AdjustFontSizeArgs::FromJson },
+
+    { ShortcutAction::SplitPane, winrt::TerminalApp::implementation::SplitPaneArgs::FromJson },
+
+    { ShortcutAction::Invalid, nullptr },
 };
 
 // Function Description:
 // - Small helper to create a json value serialization of a single
-//   KeyBinding->Action maping. The created object is of schema:
+//   KeyBinding->Action mapping.
 //   {
 //      keys:[String],
 //      command:String
@@ -178,7 +160,7 @@ Json::Value winrt::TerminalApp::implementation::AppKeyBindings::ToJson()
         const auto searchedForName = actionName.first;
         const auto searchedForAction = actionName.second;
 
-        if (const auto chord{ GetKeyBinding(searchedForAction) })
+        if (const auto chord{ GetKeyBindingForAction(searchedForAction) })
         {
             if (const auto serialization{ _ShortcutAsJsonObject(chord, searchedForName) })
             {
@@ -188,6 +170,21 @@ Json::Value winrt::TerminalApp::implementation::AppKeyBindings::ToJson()
     }
 
     return bindingsArray;
+}
+
+// Function Description:
+// - Attempts to match a string to a ShortcutAction. If there's no match, then
+//   returns ShortcutAction::Invalid
+// Arguments:
+// - actionString: the string to match to a ShortcutAction
+// Return Value:
+// - The ShortcutAction corresponding to the given string, if a match exists.
+static ShortcutAction GetActionFromString(const std::string_view actionString)
+{
+    // Try matching the command to one we have. If we can't find the
+    // action name in our list of names, let's just unbind that key.
+    const auto found = commandNames.find(actionString);
+    return found != commandNames.end() ? found->second : ShortcutAction::Invalid;
 }
 
 // Method Description:
@@ -203,8 +200,14 @@ Json::Value winrt::TerminalApp::implementation::AppKeyBindings::ToJson()
 //   `"unbound"`, then we'll clear the keybinding from the existing keybindings.
 // Arguments:
 // - json: and array of JsonObject's to deserialize into our _keyShortcuts mapping.
-void winrt::TerminalApp::implementation::AppKeyBindings::LayerJson(const Json::Value& json)
+std::vector<::TerminalApp::SettingsLoadWarnings> winrt::TerminalApp::implementation::AppKeyBindings::LayerJson(const Json::Value& json)
 {
+    // It's possible that the user provided keybindings have some warnings in
+    // them - problems that we should alert the user to, but we can recover
+    // from. Most of these warnings cannot be detected later in the Validate
+    // settings phase, so we'll collect them now.
+    std::vector<::TerminalApp::SettingsLoadWarnings> warnings;
+
     for (const auto& value : json)
     {
         if (!value.isObject())
@@ -217,26 +220,75 @@ void winrt::TerminalApp::implementation::AppKeyBindings::LayerJson(const Json::V
 
         if (keys)
         {
-            if (!keys.isArray() || keys.size() != 1)
+            const auto validString = keys.isString();
+            const auto validArray = keys.isArray() && keys.size() == 1;
+
+            // GH#4239 - If the user provided more than one key
+            // chord to a "keys" array, warn the user here.
+            // TODO: GH#1334 - remove this check.
+            if (keys.isArray() && keys.size() > 1)
+            {
+                warnings.push_back(::TerminalApp::SettingsLoadWarnings::TooManyKeysForChord);
+            }
+
+            if (!validString && !validArray)
             {
                 continue;
             }
-            const auto keyChordString = winrt::to_hstring(keys[0].asString());
+            const auto keyChordString = keys.isString() ? winrt::to_hstring(keys.asString()) : winrt::to_hstring(keys[0].asString());
             // Invalid is our placeholder that the action was not parsed.
             ShortcutAction action = ShortcutAction::Invalid;
+
+            // Keybindings can be serialized in two styles:
+            // { "command": "switchToTab0", "keys": ["ctrl+1"] },
+            // { "command": { "action": "switchToTab", "index": 0 }, "keys": ["ctrl+alt+1"] },
+
+            // 1. In the first case, the "command" is a string, that's the
+            //    action name. There are no provided args, so we'll pass
+            //    Json::Value::null to the parse function.
+            // 2. In the second case, the "command" is an object. We'll use the
+            //    "action" in that object as the action name. We'll then pass
+            //    the "command" object to the arg parser, for further parsing.
+
+            auto argsVal = Json::Value::null;
 
             // Only try to parse the action if it's actually a string value.
             // `null` will not pass this check.
             if (commandVal.isString())
             {
                 auto commandString = commandVal.asString();
-
-                // Try matching the command to one we have. If we can't find the
-                // action name in our list of names, let's just unbind that key.
-                const auto found = commandNames.find(commandString);
-                if (found != commandNames.end())
+                action = GetActionFromString(commandString);
+            }
+            else if (commandVal.isObject())
+            {
+                const auto actionVal = commandVal[JsonKey(ActionKey)];
+                if (actionVal.isString())
                 {
-                    action = found->second;
+                    auto actionString = actionVal.asString();
+                    action = GetActionFromString(actionString);
+                    argsVal = commandVal;
+                }
+            }
+
+            // Some keybindings can accept other arbitrary arguments. If it
+            // does, we'll try to deserialize any "args" that were provided with
+            // the binding.
+            IActionArgs args{ nullptr };
+            std::vector<::TerminalApp::SettingsLoadWarnings> parseWarnings;
+            const auto deserializersIter = argParsers.find(action);
+            if (deserializersIter != argParsers.end())
+            {
+                auto pfn = deserializersIter->second;
+                if (pfn)
+                {
+                    std::tie(args, parseWarnings) = pfn(argsVal);
+                }
+                warnings.insert(warnings.end(), parseWarnings.begin(), parseWarnings.end());
+
+                // if an arg parser was registered, but failed, bail
+                if (pfn && args == nullptr)
+                {
+                    continue;
                 }
             }
 
@@ -251,7 +303,10 @@ void winrt::TerminalApp::implementation::AppKeyBindings::LayerJson(const Json::V
                 // found.
                 if (action != ShortcutAction::Invalid)
                 {
-                    SetKeyBinding(action, chord);
+                    auto actionAndArgs = winrt::make_self<ActionAndArgs>();
+                    actionAndArgs->Action(action);
+                    actionAndArgs->Args(args);
+                    SetKeyBinding(*actionAndArgs, chord);
                 }
                 else
                 {
@@ -264,4 +319,6 @@ void winrt::TerminalApp::implementation::AppKeyBindings::LayerJson(const Json::V
             }
         }
     }
+
+    return warnings;
 }

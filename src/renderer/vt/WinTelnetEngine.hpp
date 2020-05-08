@@ -24,7 +24,6 @@ namespace Microsoft::Console::Render
     {
     public:
         WinTelnetEngine(_In_ wil::unique_hfile hPipe,
-                        wil::shared_event shutdownEvent,
                         const Microsoft::Console::IDefaultColorProvider& colorProvider,
                         const Microsoft::Console::Types::Viewport initialViewport,
                         _In_reads_(cColorTable) const COLORREF* const ColorTable,
@@ -34,13 +33,13 @@ namespace Microsoft::Console::Render
         [[nodiscard]] HRESULT UpdateDrawingBrushes(const COLORREF colorForeground,
                                                    const COLORREF colorBackground,
                                                    const WORD legacyColorAttribute,
-                                                   const bool isBold,
+                                                   const ExtendedAttributes extendedAttrs,
                                                    const bool isSettingDefaultBrushes) noexcept override;
         [[nodiscard]] HRESULT ScrollFrame() noexcept override;
 
         [[nodiscard]] HRESULT InvalidateScroll(const COORD* const pcoordDelta) noexcept override;
 
-        [[nodiscard]] HRESULT WriteTerminalW(const std::wstring& wstr) noexcept override;
+        [[nodiscard]] HRESULT WriteTerminalW(const std::wstring_view wstr) noexcept override;
 
     protected:
         [[nodiscard]] HRESULT _MoveCursor(const COORD coord) noexcept;

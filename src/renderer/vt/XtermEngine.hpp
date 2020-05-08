@@ -28,7 +28,6 @@ namespace Microsoft::Console::Render
     {
     public:
         XtermEngine(_In_ wil::unique_hfile hPipe,
-                    wil::shared_event shutdownEvent,
                     const Microsoft::Console::IDefaultColorProvider& colorProvider,
                     const Microsoft::Console::Types::Viewport initialViewport,
                     _In_reads_(cColorTable) const COLORREF* const ColorTable,
@@ -40,27 +39,31 @@ namespace Microsoft::Console::Render
         [[nodiscard]] HRESULT StartPaint() noexcept override;
         [[nodiscard]] HRESULT EndPaint() noexcept override;
 
+        [[nodiscard]] HRESULT PaintCursor(const CursorOptions& options) noexcept override;
+
         [[nodiscard]] virtual HRESULT UpdateDrawingBrushes(const COLORREF colorForeground,
                                                            const COLORREF colorBackground,
                                                            const WORD legacyColorAttribute,
-                                                           const bool isBold,
+                                                           const ExtendedAttributes extendedAttrs,
                                                            const bool isSettingDefaultBrushes) noexcept override;
         [[nodiscard]] HRESULT PaintBufferLine(std::basic_string_view<Cluster> const clusters,
                                               const COORD coord,
-                                              const bool trimLeft) noexcept override;
+                                              const bool trimLeft,
+                                              const bool lineWrapped) noexcept override;
         [[nodiscard]] HRESULT ScrollFrame() noexcept override;
 
         [[nodiscard]] HRESULT InvalidateScroll(const COORD* const pcoordDelta) noexcept override;
 
-        [[nodiscard]] HRESULT WriteTerminalW(_In_ const std::wstring& str) noexcept override;
+        [[nodiscard]] HRESULT WriteTerminalW(const std::wstring_view str) noexcept override;
 
     protected:
         const COLORREF* const _ColorTable;
         const WORD _cColorTable;
         const bool _fUseAsciiOnly;
-        bool _previousLineWrapped;
         bool _usingUnderLine;
         bool _needToDisableCursor;
+        bool _lastCursorIsVisible;
+        bool _nextCursorIsVisible;
 
         [[nodiscard]] HRESULT _MoveCursor(const COORD coord) noexcept override;
 
@@ -70,6 +73,7 @@ namespace Microsoft::Console::Render
 
 #ifdef UNIT_TESTING
         friend class VtRendererTest;
+        friend class ConptyOutputTests;
 #endif
     };
 }

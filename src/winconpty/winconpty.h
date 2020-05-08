@@ -19,6 +19,11 @@ typedef struct _PseudoConsole
 //      the signal pipe.
 #define PTY_SIGNAL_RESIZE_WINDOW (8u)
 
+// CreatePseudoConsole Flags
+// The other flag (PSEUDOCONSOLE_INHERIT_CURSOR) is actually defined in consoleapi.h in the OS repo
+// #define PSEUDOCONSOLE_INHERIT_CURSOR (0x1)
+#define PSEUDOCONSOLE_RESIZE_QUIRK (0x2)
+
 // Implementations of the various PseudoConsole functions.
 HRESULT _CreatePseudoConsole(const HANDLE hToken,
                              const COORD size,
@@ -31,12 +36,12 @@ HRESULT _ResizePseudoConsole(_In_ const PseudoConsole* const pPty, _In_ const CO
 void _ClosePseudoConsoleMembers(_In_ PseudoConsole* pPty);
 VOID _ClosePseudoConsole(_In_ PseudoConsole* pPty);
 
-HRESULT CreatePseudoConsoleAsUser(_In_ HANDLE hToken,
-                                  _In_ COORD size,
-                                  _In_ HANDLE hInput,
-                                  _In_ HANDLE hOutput,
-                                  _In_ DWORD dwFlags,
-                                  _Out_ HPCON* phPC);
+HRESULT ConptyCreatePseudoConsoleAsUser(_In_ HANDLE hToken,
+                                        _In_ COORD size,
+                                        _In_ HANDLE hInput,
+                                        _In_ HANDLE hOutput,
+                                        _In_ DWORD dwFlags,
+                                        _Out_ HPCON* phPC);
 
 #ifdef __cplusplus
 }

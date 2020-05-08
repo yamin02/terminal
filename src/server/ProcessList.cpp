@@ -92,9 +92,6 @@ void ConsoleProcessList::FreeProcessData(_In_ ConsoleProcessHandle* const pProce
 
     _processes.remove(pProcessData);
 
-    // Attempt to dispatch events to registered listeners.
-    _NotifyOnLastFree();
-
     delete pProcessData;
 }
 
@@ -297,7 +294,7 @@ ConsoleProcessHandle* ConsoleProcessList::GetFirstProcess() const
 // Routine Description:
 // - Requests that the OS change the process priority for the console and all attached client processes
 // Arguments:
-// - fForeground - True if console is in foreground and related processes should be prioritied. False if they can be backgrounded/deprioritized.
+// - fForeground - True if console is in foreground and related processes should be prioritized. False if they can be backgrounded/deprioritized.
 // Return Value:
 // - <none>
 // - NOTE: Will attempt to request a change, but it's non fatal if it doesn't work. Failures will be logged to debug channel.
@@ -333,19 +330,6 @@ bool ConsoleProcessList::IsEmpty() const
 }
 
 // Routine Description:
-// - Gives us an event that we should notify when the last process is removed from this list
-// - NOTE: This is a function callback and not an event so the notification of state can occur under the
-//   same global lock state that is required to add/remove client processes from the list.
-// Arguments:
-// - func - A function to call while we're removing the last process.
-// Return Value:
-// - <none>
-void ConsoleProcessList::RegisterForNotifyOnLastFree(std::function<void()> func)
-{
-    _notifyOnLastFree.emplace_back(func);
-}
-
-// Routine Description:
 // - Requests the OS allow the console to set one of its child processes as the foreground window
 // Arguments:
 // - hProcess - Handle to the process to modify
@@ -355,21 +339,4 @@ void ConsoleProcessList::RegisterForNotifyOnLastFree(std::function<void()> func)
 void ConsoleProcessList::_ModifyProcessForegroundRights(const HANDLE hProcess, const bool fForeground) const
 {
     LOG_IF_NTSTATUS_FAILED(ServiceLocator::LocateConsoleControl()->SetForeground(hProcess, fForeground));
-}
-
-// Routine Description:
-// - Attempts to notify anyone listening for when the last client process is disconnecting.
-// Arguments:
-// - <none>
-// Return Value:
-// - <none>
-void ConsoleProcessList::_NotifyOnLastFree() const
-{
-    if (_processes.empty())
-    {
-        for (auto& func : _notifyOnLastFree)
-        {
-            func();
-        }
-    }
 }

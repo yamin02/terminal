@@ -24,64 +24,43 @@ using namespace Microsoft::Console::VirtualTerminal;
 // - hPipe - a handle to the file representing the read end of the VT pipe.
 // - inheritCursor - a bool indicating if the state machine should expect a
 //      cursor positioning sequence. See MSFT:15681311.
-VtInputThread::VtInputThread(wil::unique_hfile hPipe,
-                             wil::shared_event shutdownEvent,
+VtInputThread::VtInputThread(_In_ wil::unique_hfile hPipe,
                              const bool inheritCursor) :
     _hFile{ std::move(hPipe) },
-    _shutdownEvent{ shutdownEvent },
     _hThread{},
-    _utf8Parser{ CP_UTF8 },
-    _dwThreadId{ 0 }
+    _u8State{},
+    _dwThreadId{ 0 },
+    _exitRequested{ false },
+    _exitResult{ S_OK }
 {
-    THROW_HR_IF(E_HANDLE, !_shutdownEvent);
     THROW_HR_IF(E_HANDLE, _hFile.get() == INVALID_HANDLE_VALUE);
 
     CONSOLE_INFORMATION& gci = ServiceLocator::LocateGlobals().getConsoleInformation();
 
     auto pGetSet = std::make_unique<ConhostInternalGetSet>(gci);
-    THROW_IF_NULL_ALLOC(pGetSet.get());
 
-    auto engine = std::make_unique<InputStateMachineEngine>(new InteractDispatch(pGetSet.release()), inheritCursor);
-    THROW_IF_NULL_ALLOC(engine.get());
+    auto dispatch = std::make_unique<InteractDispatch>(std::move(pGetSet));
 
-    _pInputStateMachine = std::make_unique<StateMachine>(engine.release());
-    THROW_IF_NULL_ALLOC(_pInputStateMachine.get());
+    auto engine = std::make_unique<InputStateMachineEngine>(std::move(dispatch), inheritCursor);
 
-    _shutdownWatchdog = std::async(std::launch::async, [&] {
-        _shutdownEvent.wait();
-        if (_dwThreadId != 0)
-        {
-            wil::unique_handle threadHandle(OpenThread(STANDARD_RIGHTS_ALL | THREAD_TERMINATE, FALSE, _dwThreadId));
-            LOG_LAST_ERROR_IF_NULL(threadHandle.get());
-            if (threadHandle)
-            {
-                LOG_IF_WIN32_BOOL_FALSE(CancelSynchronousIo(threadHandle.get()));
-            }
-        }
-    });
-}
+    auto engineRef = engine.get();
 
-VtInputThread::~VtInputThread()
-{
-    if (_shutdownEvent)
-    {
-        _shutdownEvent.SetEvent();
+    _pInputStateMachine = std::make_unique<StateMachine>(std::move(engine));
 
-        // Wait for watchdog future to get the memo or we might try to destroy it before it gets to work.
-        _shutdownWatchdog.wait();
-    }
+    // we need this callback to be able to flush an unknown input sequence to the app
+    auto flushCallback = std::bind(&StateMachine::FlushToTerminal, _pInputStateMachine.get());
+    engineRef->SetFlushToInputQueueCallback(flushCallback);
 }
 
 // Method Description:
-// - Processes a buffer of input characters. The characters should be utf-8
-//      encoded, and will get converted to wchar_t's to be processed by the
+// - Processes a string of input characters. The characters should be UTF-8
+//      encoded, and will get converted to wstring to be processed by the
 //      input state machine.
 // Arguments:
-// - charBuffer - the UTF-8 characters recieved.
-// - cch - number of UTF-8 characters in charBuffer
+// - u8Str - the UTF-8 string received.
 // Return Value:
 // - S_OK on success, otherwise an appropriate failure.
-[[nodiscard]] HRESULT VtInputThread::_HandleRunInput(_In_reads_(cch) const byte* const charBuffer, const int cch)
+[[nodiscard]] HRESULT VtInputThread::_HandleRunInput(const std::string_view u8Str)
 {
     // Make sure to call the GLOBAL Lock/Unlock, not the gci's lock/unlock.
     // Only the global unlock attempts to dispatch ctrl events. If you use the
@@ -93,16 +72,14 @@ VtInputThread::~VtInputThread()
 
     try
     {
-        std::unique_ptr<wchar_t[]> pwsSequence;
-        unsigned int cchConsumed;
-        unsigned int cchSequence;
-        auto hr = _utf8Parser.Parse(charBuffer, cch, cchConsumed, pwsSequence, cchSequence);
+        std::wstring wstr{};
+        auto hr = til::u8u16(u8Str, wstr, _u8State);
         // If we hit a parsing error, eat it. It's bad utf-8, we can't do anything with it.
         if (FAILED(hr))
         {
             return S_FALSE;
         }
-        _pInputStateMachine->ProcessString(pwsSequence.get(), cchSequence);
+        _pInputStateMachine->ProcessString(wstr);
     }
     CATCH_RETURN();
 
@@ -121,54 +98,44 @@ DWORD WINAPI VtInputThread::StaticVtInputThreadProc(_In_ LPVOID lpParameter)
     return pInstance->_InputThread();
 }
 
-// Routine Description:
-// - A public way of pumping a single input message through the VT input channel
-// - Reading input can be a blocking operation. This function will capture
-//   the thread ID of whomever calls it so it can be unblocked on shutdown events
-//   by a watchdog thread.
-// - This function cannot be called by two public methods simultaneously.
-//   If another is already waiting in a blocked read on the VT input thread,
-//   an invalid state error will be returned.
-// - This function is only valid during startup. Once the real VtInputThread starts
-//   to process the input, it will fill the thread ID field permanently until shutdown.
-// Arguments:
-// - <none>
-// Return Value:
-// - S_OK, a ReadFile error, an error processing input, or an invalid state error if another thread is already waiting.
-[[nodiscard]] HRESULT VtInputThread::DoReadInput()
-{
-    // If there's already a thread pumping VT input, it's not valid to read this from the outside.
-    RETURN_HR_IF(HRESULT_FROM_WIN32(ERROR_INVALID_STATE), _dwThreadId != 0);
-
-    // Store which thread is attempting to read VT input. It may get blocked indefinitely and need
-    // to get unstuck by a shutdown event.
-    _dwThreadId = GetCurrentThreadId();
-
-    // Set it back to 0 on the way out.
-    auto restoreThreadId = wil::scope_exit([&] {
-        _dwThreadId = 0;
-    });
-
-    // Perform the blocking read operation.
-    return _ReadInput();
-}
-
 // Method Description:
-// - Do a single ReadFile from our pipe, and try and handle it.
+// - Do a single ReadFile from our pipe, and try and handle it. If handling
+//      failed, throw or log, depending on what the caller wants.
 // Arguments:
-// - <none>
+// - throwOnFail: If true, throw an exception if there was an error processing
+//      the input received. Otherwise, log the error.
 // Return Value:
-// - S_OK or relevant error
-[[nodiscard]] HRESULT VtInputThread::_ReadInput()
+// - <none>
+void VtInputThread::DoReadInput(const bool throwOnFail)
 {
-    byte buffer[256];
+    char buffer[256];
     DWORD dwRead = 0;
+    bool fSuccess = !!ReadFile(_hFile.get(), buffer, ARRAYSIZE(buffer), &dwRead, nullptr);
 
-    RETURN_IF_WIN32_BOOL_FALSE(ReadFile(_hFile.get(), buffer, ARRAYSIZE(buffer), &dwRead, nullptr));
+    // If we failed to read because the terminal broke our pipe (usually due
+    //      to dying itself), close gracefully with ERROR_BROKEN_PIPE.
+    // Otherwise throw an exception. ERROR_BROKEN_PIPE is the only case that
+    //       we want to gracefully close in.
+    if (!fSuccess)
+    {
+        _exitRequested = true;
+        _exitResult = HRESULT_FROM_WIN32(GetLastError());
+        return;
+    }
 
-    RETURN_IF_FAILED(_HandleRunInput(buffer, dwRead));
-
-    return S_OK;
+    HRESULT hr = _HandleRunInput({ buffer, gsl::narrow_cast<size_t>(dwRead) });
+    if (FAILED(hr))
+    {
+        if (throwOnFail)
+        {
+            _exitResult = hr;
+            _exitRequested = true;
+        }
+        else
+        {
+            LOG_IF_FAILED(hr);
+        }
+    }
 }
 
 // Method Description:
@@ -180,19 +147,13 @@ DWORD WINAPI VtInputThread::StaticVtInputThreadProc(_In_ LPVOID lpParameter)
 //      have caused us to exit.
 DWORD VtInputThread::_InputThread()
 {
-    auto onExitTriggerShutdown = wil::scope_exit([&] {
-        _shutdownEvent.SetEvent();
-    });
-
-    while (true)
+    while (!_exitRequested)
     {
-        // NOTE: From inside the thread itself, we don't need to stash the thread handle each call
-        // because it was done permanently for us when the thread was created. No one else is allowed
-        // in through the public method while the actual VtInputThread is running. Only during startup.
-        RETURN_IF_FAILED(_ReadInput());
+        DoReadInput(true);
     }
+    ServiceLocator::LocateGlobals().getConsoleInformation().GetVtIo()->CloseInput();
 
-    return S_OK;
+    return _exitResult;
 }
 
 // Method Description:
@@ -214,9 +175,6 @@ DWORD VtInputThread::_InputThread()
 
     RETURN_LAST_ERROR_IF_NULL(hThread);
     _hThread.reset(hThread);
-
-    // This will permanently shut the door on the public read method until shutdown.
-    // Once the thread is servicing messages, we don't want any other threads getting in here.
     _dwThreadId = dwThreadId;
 
     return S_OK;
