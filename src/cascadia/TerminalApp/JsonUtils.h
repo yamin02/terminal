@@ -122,7 +122,7 @@ namespace TerminalApp::JsonUtils
 
         static bool CanConvert(const Json::Value& json)
         {
-            return json.isInt();
+            return json.isUInt();
         }
     };
 
@@ -263,6 +263,14 @@ namespace TerminalApp::JsonUtils
         return false;
     }
 
+    template <typename T>
+    T GetValue(const Json::Value& json)
+    {
+        T local{};
+        GetValue(json, local);
+        return local; // returns zero-initialized or value
+    }
+
     template<typename T>
     bool GetValueForKey(const Json::Value& json, std::string_view key, T& target)
     {
@@ -279,6 +287,14 @@ namespace TerminalApp::JsonUtils
             }
         }
         return false;
+    }
+
+    template <typename T>
+    T GetValueForKey(const Json::Value& json, std::string_view key)
+    {
+        T local{};
+        GetValueForKey(json, key, local);
+        return local; // returns zero-initialized?
     }
 
     template<typename T>
