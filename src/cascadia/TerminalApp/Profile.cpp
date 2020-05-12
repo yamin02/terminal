@@ -4,7 +4,7 @@
 #include "pch.h"
 #include "Profile.h"
 #include "Utils.h"
-#include "JsonUtils-DH.h"
+#include "JsonUtils.h"
 #include "../../types/inc/Utils.hpp"
 #include <DefaultSettings.h>
 
@@ -399,10 +399,9 @@ bool Profile::ShouldBeLayered(const Json::Value& json) const
         return false;
     }
 
-    std::optional<GUID> otherGuid;
     // First, check that GUIDs match. This is easy. If they don't match, they
     // should _definitely_ not layer.
-    if (JsonUtils::GetValueForKey(json, GuidKey, otherGuid))
+    if (const auto otherGuid{ JsonUtils::GetValueForKey<std::optional<GUID>>(json, GuidKey) })
     {
         if (otherGuid != _guid) // optional compare takes care of this
         {
@@ -828,17 +827,13 @@ GUID Profile::_GenerateGuidForProfile(const std::wstring& name, const std::optio
 // - The json's `guid`, or a guid synthesized for it.
 GUID Profile::GetGuidOrGenerateForJson(const Json::Value& json) noexcept
 {
-    std::optional<GUID> guid{ std::nullopt };
-
-    if (JsonUtils::GetValueForKey(json, GuidKey, guid))
+    if (const auto guid{ JsonUtils::GetValueForKey<std::optional<GUID>>(json, GuidKey) })
     {
         return guid.value();
     }
 
-    std::wstring name{};
-    std::optional<std::wstring> source{ std::nullopt };
-    JsonUtils::GetValueForKey(json, NameKey, name);
-    JsonUtils::GetValueForKey(json, SourceKey, source);
+    const auto name{ JsonUtils::GetValueForKey<std::wstring>(json, NameKey) };
+    const auto source{ JsonUtils::GetValueForKey<std::optional<std::wstring>>(json, SourceKey) };
 
     return Profile::_GenerateGuidForProfile(name, source);
 }

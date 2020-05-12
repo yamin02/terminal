@@ -111,8 +111,6 @@ private:
 
     static GUID _GenerateGuidForProfile(const std::wstring& name, const std::optional<std::wstring>& source) noexcept;
 
-    static bool _ConvertJsonToBool(const Json::Value& json);
-
     std::optional<GUID> _guid{ std::nullopt };
     std::optional<std::wstring> _source{ std::nullopt };
     std::wstring _name;
