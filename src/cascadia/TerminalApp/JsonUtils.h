@@ -219,17 +219,17 @@ namespace TerminalApp::JsonUtils
     // - target: the value to populate with the converted result
     // Return Value:
     // - a boolean indicating whether the value existed (in this case, was non-null)
-    template<typename T>
-    bool GetValue(const Json::Value& json, T& target)
+    template<typename T, typename Converter>
+    bool GetValue(const Json::Value& json, T& target, Converter&& conv)
     {
         if (json)
         {
-            if (!ConversionTrait<T>::CanConvert(json))
+            if (!conv.CanConvert(json))
             {
                 throw TypeMismatchException{};
             }
 
-            target = ConversionTrait<T>::FromJson(json);
+            target = conv.FromJson(json);
             return true;
         }
         return false;
@@ -245,8 +245,8 @@ namespace TerminalApp::JsonUtils
     // - target: the value to populate with the converted result
     // Return Value:
     // - a boolean indicating whether the optional was changed
-    template<typename TOpt>
-    bool GetValue(const Json::Value& json, std::optional<TOpt>& target)
+    template<typename TOpt, typename Converter>
+    bool GetValue(const Json::Value& json, std::optional<TOpt>& target, Converter&& conv)
     {
         if (json.isNull())
         {
@@ -255,7 +255,7 @@ namespace TerminalApp::JsonUtils
         }
 
         TOpt local{};
-        if (GetValue(json, local))
+        if (GetValue(json, local, std::forward<Converter>(conv)))
         {
             target = std::move(local);
             return true;
@@ -263,11 +263,31 @@ namespace TerminalApp::JsonUtils
         return false;
     }
 
+    template<typename T>
+    bool GetValue(const Json::Value& json, T& target)
+    {
+        return GetValue(json, target, ConversionTrait<T>{});
+    }
+
+    template<typename TOpt>
+    bool GetValue(const Json::Value& json, std::optional<TOpt>& target)
+    {
+        return GetValue(json, target, ConversionTrait<T>{});
+    }
+
+    template <typename T, typename Converter>
+    T GetValue(const Json::Value& json, Converter&& conv)
+    {
+        T local{};
+        GetValue(json, local, std::forward<Converter>(conv));
+        return local; // returns zero-initialized or value
+    }
+
     template <typename T>
     T GetValue(const Json::Value& json)
     {
         T local{};
-        GetValue(json, local);
+        GetValue(json, local, ConversionTrait<T>{});
         return local; // returns zero-initialized or value
     }
 
