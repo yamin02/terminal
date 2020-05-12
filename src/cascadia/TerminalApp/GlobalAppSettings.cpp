@@ -54,12 +54,11 @@ GlobalAppSettings::GlobalAppSettings() :
     _keybindings{ winrt::make_self<winrt::TerminalApp::implementation::AppKeyBindings>() },
     _keybindingsWarnings{},
     _colorSchemes{},
-    _defaultProfile{},
-    _initialRows{ DEFAULT_ROWS },
-    _initialCols{ DEFAULT_COLS },
-    _rowsToScroll{ DEFAULT_ROWSTOSCROLL },
+    _InitialRows{ DEFAULT_ROWS },
+    _InitialCols{ DEFAULT_COLS },
+    _RowsToScroll{ DEFAULT_ROWSTOSCROLL },
     _WordDelimiters{ DEFAULT_WORD_DELIMITERS },
-    _debugFeatures{ debugFeaturesDefault }
+    _DebugFeatures{ debugFeaturesDefault }
 {
 }
 
@@ -77,24 +76,9 @@ const std::unordered_map<std::wstring, ColorScheme>& GlobalAppSettings::GetColor
     return _colorSchemes;
 }
 
-void GlobalAppSettings::DefaultProfile(const GUID defaultProfile) noexcept
-{
-    _defaultProfile = defaultProfile;
-}
-
-GUID GlobalAppSettings::DefaultProfile() const noexcept
-{
-    return _defaultProfile;
-}
-
 AppKeyBindings GlobalAppSettings::GetKeybindings() const noexcept
 {
     return *_keybindings;
-}
-
-bool GlobalAppSettings::DebugFeaturesEnabled() const noexcept
-{
-    return _debugFeatures;
 }
 
 // Method Description:
@@ -106,9 +90,9 @@ bool GlobalAppSettings::DebugFeaturesEnabled() const noexcept
 void GlobalAppSettings::ApplyToSettings(TerminalSettings& settings) const noexcept
 {
     settings.KeyBindings(GetKeybindings());
-    settings.InitialRows(_initialRows);
-    settings.InitialCols(_initialCols);
-    settings.RowsToScroll(_rowsToScroll);
+    settings.InitialRows(_InitialRows);
+    settings.InitialCols(_InitialCols);
+    settings.RowsToScroll(_RowsToScroll);
 
     settings.WordDelimiters(_WordDelimiters);
     settings.CopyOnSelect(_CopyOnSelect);
@@ -124,10 +108,10 @@ Json::Value GlobalAppSettings::ToJson() const
 {
     Json::Value jsonObject;
 
-    jsonObject[JsonKey(DefaultProfileKey)] = winrt::to_string(Utils::GuidToString(_defaultProfile));
-    jsonObject[JsonKey(InitialRowsKey)] = _initialRows;
-    jsonObject[JsonKey(InitialColsKey)] = _initialCols;
-    jsonObject[JsonKey(RowsToScrollKey)] = _rowsToScroll;
+    jsonObject[JsonKey(DefaultProfileKey)] = winrt::to_string(Utils::GuidToString(_DefaultProfile));
+    jsonObject[JsonKey(InitialRowsKey)] = _InitialRows;
+    jsonObject[JsonKey(InitialColsKey)] = _InitialCols;
+    jsonObject[JsonKey(RowsToScrollKey)] = _RowsToScroll;
     jsonObject[JsonKey(InitialPositionKey)] = _SerializeInitialPosition(_InitialPosition);
     jsonObject[JsonKey(AlwaysShowTabsKey)] = _AlwaysShowTabs;
     jsonObject[JsonKey(ShowTitleInTitlebarKey)] = _ShowTitleInTitlebar;
@@ -141,7 +125,7 @@ Json::Value GlobalAppSettings::ToJson() const
     jsonObject[JsonKey(KeybindingsKey)] = _keybindings->ToJson();
     jsonObject[JsonKey(ConfirmCloseAllKey)] = _ConfirmCloseAllTabs;
     jsonObject[JsonKey(SnapToGridOnResizeKey)] = _SnapToGridOnResize;
-    jsonObject[JsonKey(DebugFeaturesKey)] = _debugFeatures;
+    jsonObject[JsonKey(DebugFeaturesKey)] = _DebugFeatures;
 
     return jsonObject;
 }
@@ -164,27 +148,27 @@ void GlobalAppSettings::LayerJson(const Json::Value& json)
     if (auto defaultProfile{ json[JsonKey(DefaultProfileKey)] })
     {
         auto guid = Utils::GuidFromString(GetWstringFromJson(defaultProfile));
-        _defaultProfile = guid;
+        _DefaultProfile = guid;
     }
 
     JsonUtils::GetBool(json, AlwaysShowTabsKey, _AlwaysShowTabs);
 
     JsonUtils::GetBool(json, ConfirmCloseAllKey, _ConfirmCloseAllTabs);
 
-    JsonUtils::GetInt(json, InitialRowsKey, _initialRows);
+    JsonUtils::GetInt(json, InitialRowsKey, _InitialRows);
 
-    JsonUtils::GetInt(json, InitialColsKey, _initialCols);
+    JsonUtils::GetInt(json, InitialColsKey, _InitialCols);
 
     if (auto rowsToScroll{ json[JsonKey(RowsToScrollKey)] })
     {
         //if it's not an int we fall back to setting it to 0, which implies using the system setting. This will be the case if it's set to "system"
         if (rowsToScroll.isInt())
         {
-            _rowsToScroll = rowsToScroll.asInt();
+            _RowsToScroll = rowsToScroll.asInt();
         }
         else
         {
-            _rowsToScroll = 0;
+            _RowsToScroll = 0;
         }
     }
 
@@ -233,7 +217,7 @@ void GlobalAppSettings::LayerJson(const Json::Value& json)
     JsonUtils::GetBool(json, SnapToGridOnResizeKey, _SnapToGridOnResize);
 
     // GetBool will only override the current value if the key exists
-    JsonUtils::GetBool(json, DebugFeaturesKey, _debugFeatures);
+    JsonUtils::GetBool(json, DebugFeaturesKey, _DebugFeatures);
 }
 
 // Method Description:
@@ -328,10 +312,9 @@ void GlobalAppSettings::_ParseInitialPosition(const std::string& initialPosition
 // - Helper function for converting X/Y initial positions to a string
 //   value.
 // Arguments:
-// - initialX: reference to the _initialX member
-//   initialY: reference to the _initialY member
+// - position: the launch position to serialize
 // Return Value:
-// - The concatenated string for the the current initialX and initialY
+// - The concatenated string for the the current initial position
 std::string GlobalAppSettings::_SerializeInitialPosition(const LaunchPosition& position) noexcept
 {
     std::string serializedInitialPos = "";
