@@ -6,7 +6,7 @@
 #include "DefaultSettings.h"
 #include "../../types/inc/Utils.hpp"
 #include "Utils.h"
-#include "JsonUtils-DH.h"
+#include "JsonUtils.h"
 
 using namespace ::Microsoft::Console;
 using namespace TerminalApp;
@@ -188,9 +188,7 @@ til::color ColorScheme::GetCursorColor() const noexcept
 // - the name of the color scheme represented by `json` as a std::wstring optional
 //   i.e. the value of the `name` property.
 // - returns std::nullopt if `json` doesn't have the `name` property
-std::optional<std::wstring> TerminalApp::ColorScheme::GetNameFromJson(const Json::Value& json)
+std::optional<std::wstring> ColorScheme::GetNameFromJson(const Json::Value& json)
 {
-    std::optional<std::wstring> name;
-    JsonUtils::GetValueForKey(json, NameKey, name);
-    return name;
+    return JsonUtils::GetValueForKey<std::optional<std::wstring>>(json, NameKey);
 }
