@@ -68,7 +68,7 @@ public:
     bool GetCopyOnSelect() const noexcept;
     void SetCopyOnSelect(const bool copyOnSelect) noexcept;
 
-    short GetCopyFormatting() const noexcept;
+    int GetCopyFormatting() const noexcept;
 
     std::optional<int32_t> GetInitialX() const noexcept;
 
@@ -114,7 +114,7 @@ private:
     bool _showTabsInTitlebar;
     std::wstring _wordDelimiters;
     bool _copyOnSelect;
-    short _copyFormatting;
+    int _copyFormatting;
     winrt::Windows::UI::Xaml::ElementTheme _theme;
     winrt::Microsoft::UI::Xaml::Controls::TabViewWidthMode _tabWidthMode;
 
@@ -141,7 +141,7 @@ private:
     static std::wstring_view _SerializeLaunchMode(const winrt::TerminalApp::LaunchMode launchMode) noexcept;
     static winrt::TerminalApp::LaunchMode _ParseLaunchMode(const std::wstring& launchModeString) noexcept;
 
-    static short _ParseCopyFormatting(const Json::Value& value) noexcept;
+    static int _ParseCopyFormatting(const Json::Value& value) noexcept;
 
     friend class TerminalAppLocalTests::SettingsTests;
     friend class TerminalAppLocalTests::ColorSchemeTests;
