@@ -47,6 +47,11 @@ static constexpr std::string_view SoftwareRenderingKey{ "experimental.rendering.
 
 static constexpr std::string_view DebugFeaturesKey{ "debugFeatures" };
 
+// copyFormatting values
+static constexpr std::string_view PlainKey{ "plain" };
+static constexpr std::string_view HtmlKey{ "html" };
+static constexpr std::string_view RtfKey{ "rtf" };
+
 #ifdef _DEBUG
 static constexpr bool debugFeaturesDefault{ true };
 #else
@@ -71,7 +76,7 @@ GlobalAppSettings::GlobalAppSettings() :
     _tabWidthMode{ TabViewWidthMode::Equal },
     _wordDelimiters{ DEFAULT_WORD_DELIMITERS },
     _copyOnSelect{ false },
-    _copyFormatting{ false },
+    _copyFormatting{ 0 },
     _launchMode{ LaunchMode::DefaultMode },
     _forceFullRepaintRendering{ false },
     _softwareRendering{ false },
@@ -168,7 +173,7 @@ void GlobalAppSettings::SetCopyOnSelect(const bool copyOnSelect) noexcept
     _copyOnSelect = copyOnSelect;
 }
 
-bool GlobalAppSettings::GetCopyFormatting() const noexcept
+short GlobalAppSettings::GetCopyFormatting() const noexcept
 {
     return _copyFormatting;
 }
@@ -304,7 +309,10 @@ void GlobalAppSettings::LayerJson(const Json::Value& json)
 
     JsonUtils::GetBool(json, CopyOnSelectKey, _copyOnSelect);
 
-    JsonUtils::GetBool(json, CopyFormattingKey, _copyFormatting);
+    if (auto copyFormatting{ json[JsonKey(CopyFormattingKey)] })
+    {
+        _copyFormatting = _ParseCopyFormatting(copyFormatting);
+    }
 
     if (auto launchMode{ json[JsonKey(LaunchModeKey)] })
     {
@@ -475,6 +483,54 @@ LaunchMode GlobalAppSettings::_ParseLaunchMode(const std::wstring& launchModeStr
     }
 
     return LaunchMode::DefaultMode;
+}
+
+// Method Description:
+// - Helper function for converting the user-specified copyFormatting value
+//   to an array of CopyFormat enum values
+// Arguments:
+// - launchModeString: The string value from the settings file to parse
+// Return Value:
+// - The corresponding enum values which map to the bool or array of strings provided by the user
+short GlobalAppSettings::_ParseCopyFormatting(const Json::Value& json) noexcept
+{
+    if (json.isArray())
+    {
+        short result = 0;
+        for (const auto value : json)
+        {
+            const auto format = value.asString();
+            if (format == PlainKey)
+            {
+                result |= static_cast<short>(CopyFormat::Plain);
+            }
+            else if (format == HtmlKey)
+            {
+                result |= static_cast<short>(CopyFormat::HTML);
+            }
+            if (format == RtfKey)
+            {
+                result |= static_cast<short>(CopyFormat::RTF);
+            }
+        }
+        return result;
+    }
+    else if (json.isBool())
+    {
+        if (json.asBool())
+        {
+            return static_cast<short>(CopyFormat::Plain) |
+                   static_cast<short>(CopyFormat::HTML) |
+                   static_cast<short>(CopyFormat::RTF);
+        }
+        else
+        {
+            return static_cast<short>(CopyFormat::Plain);
+        }
+    }
+    return static_cast<short>(CopyFormat::Plain) |
+           static_cast<short>(CopyFormat::HTML) |
+           static_cast<short>(CopyFormat::RTF);
 }
 
 // Method Description:

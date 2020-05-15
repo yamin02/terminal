@@ -13,6 +13,13 @@ namespace TerminalApp
         MaximizedMode,
     };
 
+    enum CopyFormat
+    {
+        Plain = 0x1,
+        HTML = 0x2,
+        RTF = 0x4
+    };
+
     [default_interface] runtimeclass AppLogic : IF7Listener
     {
         AppLogic();
