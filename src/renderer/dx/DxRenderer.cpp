@@ -547,6 +547,8 @@ CATCH_RETURN();
                                                                     &props,
                                                                     &_d2dRenderTarget));
 
+        RETURN_IF_FAILED(_d2dRenderTarget.As(&_d2dDeviceContext));
+
         // We need the AntialiasMode for non-text object to be Aliased to ensure
         //  that background boxes line up with each other and don't leave behind
         //  stray colors.
@@ -1293,7 +1295,7 @@ try
     // Assemble the drawing context information
     DrawingContext context(_d2dRenderTarget.Get(),
                            _d2dBrushForeground.Get(),
-                           _d2dBrushBackground.Get(),
+                           _backgroundColor,
                            forceGrayscaleAA,
                            _dwriteFactory.Get(),
                            spacing,
@@ -1483,18 +1485,34 @@ try
     }
 
     Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> brush = _d2dBrushForeground;
+    Microsoft::WRL::ComPtr<ID2D1Effect> fillImage;
 
     if (options.fUseColor)
     {
         // Make sure to make the cursor opaque
         RETURN_IF_FAILED(_d2dRenderTarget->CreateSolidColorBrush(_ColorFFromColorRef(OPACITY_OPAQUE | options.cursorColor), &brush));
+        if (paintType == CursorPaintType::Fill)
+        {
+            _d2dDeviceContext->CreateEffect(CLSID_D2D1Flood, &fillImage);
+            fillImage->SetValue(0, _ColorFFromColorRef(0xffffffff)); //OPACITY_OPAQUE | options.cursorColor));
+        }
     }
 
     switch (paintType)
     {
     case CursorPaintType::Fill:
     {
-        _d2dRenderTarget->FillRectangle(rect, brush.Get());
+        if (fillImage)
+        {
+            const D2D1_POINT_2F destination{ D2D1::Point2F(rect.left, rect.top) };
+            _d2dRenderTarget->PushAxisAlignedClip(rect, D2D1_ANTIALIAS_MODE_ALIASED);
+            _d2dDeviceContext->DrawImage(fillImage.Get(), &destination, &rect, D2D1_INTERPOLATION_MODE_LINEAR, D2D1_COMPOSITE_MODE_MASK_INVERT);
+            _d2dRenderTarget->PopAxisAlignedClip();
+        }
+        else
+        {
+            _d2dRenderTarget->FillRectangle(rect, brush.Get());
+        }
         break;
     }
     case CursorPaintType::Outline:

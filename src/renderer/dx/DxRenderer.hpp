@@ -12,6 +12,8 @@
 
 #include <d3d11.h>
 #include <d2d1.h>
+#include <d2d1_1.h>
+#include <d2d1effects.h>
 #include <d2d1helper.h>
 #include <dwrite.h>
 #include <dwrite_1.h>
@@ -179,6 +181,7 @@ namespace Microsoft::Console::Render
         ::Microsoft::WRL::ComPtr<IDXGIFactory2> _dxgiFactory2;
         ::Microsoft::WRL::ComPtr<IDXGISurface> _dxgiSurface;
         ::Microsoft::WRL::ComPtr<ID2D1RenderTarget> _d2dRenderTarget;
+        ::Microsoft::WRL::ComPtr<ID2D1DeviceContext> _d2dDeviceContext;
         ::Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> _d2dBrushForeground;
         ::Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> _d2dBrushBackground;
         ::Microsoft::WRL::ComPtr<IDXGISwapChain1> _dxgiSwapChain;
