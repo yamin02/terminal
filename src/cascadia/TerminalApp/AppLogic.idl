@@ -13,6 +13,7 @@ namespace TerminalApp
         MaximizedMode,
     };
 
+    // Each CopyFormat value should be a flag in a bitfield
     enum CopyFormat
     {
         Plain = 0x1,
