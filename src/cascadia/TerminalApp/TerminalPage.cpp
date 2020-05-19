@@ -2025,6 +2025,11 @@ namespace winrt::TerminalApp::implementation
         // TODO GH#3327: Look at what to do with the NC area when we have XAML theming
     }
 
+    //Windows::Foundation::Collections::IObservableVector<TerminalApp::Tab> TerminalPage::Tabs()
+    //{
+    //    return _tabs;
+    //}
+
     // -------------------------------- WinRT Events ---------------------------------
     // Winrt events need a method for adding a callback to the event and removing the callback.
     // These macros will define them both for you.
