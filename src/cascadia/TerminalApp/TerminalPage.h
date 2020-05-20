@@ -123,7 +123,7 @@ namespace winrt::TerminalApp::implementation
         void _UpdateTabView();
         void _UpdateTabWidthMode();
         void _DuplicateTabViewItem();
-        void _RemoveTabViewItem(const Microsoft::UI::Xaml::Controls::TabViewItem& tabViewItem);
+        //void _RemoveTabViewItem(const Microsoft::UI::Xaml::Controls::TabViewItem& tabViewItem);
         void _RemoveTabViewItemByIndex(uint32_t tabIndex);
 
         void _RegisterTerminalEvents(Microsoft::Terminal::TerminalControl::TermControl term, Tab& hostingTab);
@@ -139,7 +139,7 @@ namespace winrt::TerminalApp::implementation
         void _CloseFocusedPane();
         void _CloseAllTabs();
 
-        winrt::fire_and_forget _RemoveOnCloseRoutine(Microsoft::UI::Xaml::Controls::TabViewItem tabViewItem, winrt::com_ptr<TerminalPage> page);
+        winrt::fire_and_forget _RemoveOnCloseRoutine(winrt::TerminalApp::Tab tabViewItem, winrt::com_ptr<TerminalPage> page);
 
         // Todo: add more event implementations here
         // MSFT:20641986: Add keybindings for New Window

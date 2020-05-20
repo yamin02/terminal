@@ -455,11 +455,17 @@ namespace winrt::TerminalApp::implementation
     }
     CATCH_LOG();
 
-    winrt::fire_and_forget TerminalPage::_RemoveOnCloseRoutine(Microsoft::UI::Xaml::Controls::TabViewItem tabViewItem, winrt::com_ptr<TerminalPage> page)
+    winrt::fire_and_forget TerminalPage::_RemoveOnCloseRoutine(TerminalApp::Tab tab, winrt::com_ptr<TerminalPage> page)
     {
         co_await winrt::resume_foreground(page->_tabView.Dispatcher());
 
-        page->_RemoveTabViewItem(tabViewItem);
+        uint32_t tabIndex = 0;
+        if (!_tabs.IndexOf(tab, tabIndex))
+        {
+            return;
+        }
+
+        page->_RemoveTabViewItemByIndex(tabIndex);
     }
 
     // Method Description:
@@ -527,12 +533,12 @@ namespace winrt::TerminalApp::implementation
         // CREATE NEW TAB
 
         // When the tab is closed, remove it from our list of tabs.
-        //newTabImpl->Closed([tabViewItem, weakThis{ get_weak() }](auto&& /*s*/, auto&& /*e*/) {
-        //    if (auto page{ weakThis.get() })
-        //    {
-        //        page->_RemoveOnCloseRoutine(tabViewItem, page);
-        //    }
-        //});
+        newTabImpl->Closed([newTabImpl, weakThis{ get_weak() }](auto&& /*s*/, auto&& /*e*/) {
+            if (auto page{ weakThis.get() })
+            {
+                page->_RemoveOnCloseRoutine(*newTabImpl, page);
+            }
+        });
 
         if (debugConnection) // this will only be set if global debugging is on and tap is active
         {
@@ -780,7 +786,7 @@ namespace winrt::TerminalApp::implementation
         // collapse/show the row that the tabs are in.
         // NaN is the special value XAML uses for "Auto" sizing.
         // TODO: How do i make a tab view height 0
-        //_tabView.Height(isVisible ? NAN : 0);
+        _tabView.Height(isVisible ? NAN : 0);
     }
 
     // Method Description:
@@ -821,15 +827,15 @@ namespace winrt::TerminalApp::implementation
     //   and call _RemoveTabViewItemByIndex
     // Arguments:
     // - tabViewItem: the TabViewItem in the TabView that is being removed.
-    void TerminalPage::_RemoveTabViewItem(const MUX::Controls::TabViewItem& tabViewItem)
-    {
-        uint32_t tabIndexFromControl = 0;
-        if (_tabView.TabItems().IndexOf(tabViewItem, tabIndexFromControl))
-        {
-            // If IndexOf returns true, we've actually got an index
-            _RemoveTabViewItemByIndex(tabIndexFromControl);
-        }
-    }
+    //void TerminalPage::_RemoveTabViewItem(const MUX::Controls::TabViewItem& tabViewItem)
+    //{
+    //    uint32_t tabIndexFromControl = 0;
+    //    if (_tabView.TabItems().IndexOf(tabViewItem, tabIndexFromControl))
+    //    {
+    //        // If IndexOf returns true, we've actually got an index
+    //        _RemoveTabViewItemByIndex(tabIndexFromControl);
+    //    }
+    //}
 
     // Method Description:
     // - Removes the tab (both TerminalControl and XAML)
@@ -843,7 +849,6 @@ namespace winrt::TerminalApp::implementation
         tab->Shutdown();
 
         _tabs.RemoveAt(tabIndex);
-        _tabView.TabItems().RemoveAt(tabIndex);
 
         // To close the window here, we need to close the hosting window.
         if (_tabs.Size() == 0)
@@ -878,8 +883,7 @@ namespace winrt::TerminalApp::implementation
             // here. If we don't, then the TabView will technically not have a
             // selected item at all, which can make things like ClosePane not
             // work correctly.
-            auto newSelectedTab{ _GetStrongTabImpl(newSelectedIndex) };
-            _tabView.SelectedItem(newSelectedTab->GetTabViewItem());
+            _tabView.SelectedIndex(newSelectedIndex);
         }
     }
 
@@ -1630,46 +1634,7 @@ namespace winrt::TerminalApp::implementation
             return;
         }
 
-        _tabs.RemoveAt(tabIndex);
-
-        const auto tabImpl = _GetStrongTabImpl(tabProj);
-        tabImpl->Shutdown();
-
-        if (_tabs.Size() == 0)
-        {
-            _lastTabClosedHandlers(*this, nullptr);
-        }
-        else if (_isFullscreen)
-        {
-            // GH#5799 - If we're fullscreen, the TabView isn't visible. If it's
-            // not Visible, it's _not_ going to raise a SelectionChanged event,
-            // which is what we usually use to focus another tab. Instead, we'll
-            // have to do it manually here.
-            //
-            // We can't use
-            //   auto selectedIndex = _tabView.SelectedIndex();
-            // Because this will always return -1 in this scenario unfortunately.
-            //
-            // So, what we're going to try to do is move the focus to the tab
-            // to the left, within the bounds of how many tabs we have.
-            //
-            // EX: we have 4 tabs: [A, B, C, D]. If we close:
-            // * A (tabIndex=0): We'll want to focus tab B (now in index 0)
-            // * B (tabIndex=1): We'll want to focus tab A (now in index 0)
-            // * C (tabIndex=2): We'll want to focus tab B (now in index 1)
-            // * D (tabIndex=3): We'll want to focus tab C (now in index 2)
-            const auto newSelectedIndex = std::clamp<int32_t>(tabIndex - 1, 0, _tabs.Size());
-            // _UpdatedSelectedTab will do the work of setting up the new tab as
-            // the focused one, and unfocusing all the others.
-            _UpdatedSelectedTab(newSelectedIndex);
-
-            // Also, we need to _manually_ set the SelectedItem of the tabView
-            // here. If we don't, then the TabView will technically not have a
-            // selected item at all, which can make things like ClosePane not
-            // work correctly.
-            //auto newSelectedTab{ _GetStrongTabImpl(newSelectedIndex) };
-            _tabView.SelectedIndex(newSelectedIndex);
-        }
+        _RemoveTabViewItemByIndex(tabIndex);
     }
 
     // Method Description:
