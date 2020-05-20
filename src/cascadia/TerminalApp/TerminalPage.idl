@@ -20,7 +20,7 @@ namespace TerminalApp
         String ApplicationDisplayName { get; };
         String ApplicationVersion { get; };
 
-		//Windows.Foundation.Collections.IObservableVector<Tab> Tabs { get; };
+		Windows.Foundation.Collections.IObservableVector<Tab> Tabs { get; };
 
         event Windows.Foundation.TypedEventHandler<Object, String> TitleChanged;
         event Windows.Foundation.TypedEventHandler<Object, LastTabClosedEventArgs> LastTabClosed;

@@ -63,8 +63,7 @@ namespace winrt::TerminalApp::implementation
         _HookupKeyBindings(_settings->GetKeybindings());
 
         _tabContent = this->TabContent();
-        _tabRow = this->TabRow();
-        _tabView = _tabRow.TabView();
+        _tabView = TabView();
         _rearranging = false;
 
         // GH#2455 - Make sure to try/catch calls to Application::Current,
@@ -113,21 +112,20 @@ namespace winrt::TerminalApp::implementation
             }
         });
 
-        auto tabRowImpl = winrt::get_self<implementation::TabRowControl>(_tabRow);
-        _newTabButton = tabRowImpl->NewTabButton();
+        _newTabButton = NewTabButton();
 
         if (_settings->GlobalSettings().GetShowTabsInTitlebar())
         {
             // Remove the TabView from the page. We'll hang on to it, we need to
             // put it in the titlebar.
             uint32_t index = 0;
-            if (this->Root().Children().IndexOf(_tabRow, index))
+            if (this->Root().Children().IndexOf(_tabView, index))
             {
                 this->Root().Children().RemoveAt(index);
             }
 
             // Inform the host that our titlebar content has changed.
-            _setTitleBarContentHandlers(*this, _tabRow);
+            _setTitleBarContentHandlers(*this, _tabView);
         }
 
         // Hookup our event handlers to the ShortcutActionDispatch
@@ -140,9 +138,9 @@ namespace winrt::TerminalApp::implementation
                 page->_OpenNewTab(nullptr);
             }
         });
-        _tabView.SelectionChanged({ this, &TerminalPage::_OnTabSelectionChanged });
-        _tabView.TabCloseRequested({ this, &TerminalPage::_OnTabCloseRequested });
-        _tabView.TabItemsChanged({ this, &TerminalPage::_OnTabItemsChanged });
+        //_tabView.SelectionChanged({ this, &TerminalPage::_OnTabSelectionChanged });
+        //_tabView.TabCloseRequested({ this, &TerminalPage::_OnTabCloseRequested });
+        //_tabView.TabItemsChanged({ this, &TerminalPage::_OnTabItemsChanged });
 
         _CreateNewTabFlyout();
 
@@ -519,9 +517,6 @@ namespace winrt::TerminalApp::implementation
             }
         });
 
-        auto tabViewItem = newTabImpl->GetTabViewItem();
-        _tabView.TabItems().Append(tabViewItem);
-
         // Set this tab's icon to the icon from the user's profile
         const auto* const profile = _settings->FindProfile(profileGuid);
         if (profile != nullptr && profile->HasIcon())
@@ -529,15 +524,15 @@ namespace winrt::TerminalApp::implementation
             newTabImpl->UpdateIcon(profile->GetExpandedIconPath());
         }
 
-        tabViewItem.PointerPressed({ this, &TerminalPage::_OnTabClick });
+        // CREATE NEW TAB
 
         // When the tab is closed, remove it from our list of tabs.
-        newTabImpl->Closed([tabViewItem, weakThis{ get_weak() }](auto&& /*s*/, auto&& /*e*/) {
-            if (auto page{ weakThis.get() })
-            {
-                page->_RemoveOnCloseRoutine(tabViewItem, page);
-            }
-        });
+        //newTabImpl->Closed([tabViewItem, weakThis{ get_weak() }](auto&& /*s*/, auto&& /*e*/) {
+        //    if (auto page{ weakThis.get() })
+        //    {
+        //        page->_RemoveOnCloseRoutine(tabViewItem, page);
+        //    }
+        //});
 
         if (debugConnection) // this will only be set if global debugging is on and tap is active
         {
@@ -549,7 +544,7 @@ namespace winrt::TerminalApp::implementation
 
         // This kicks off TabView::SelectionChanged, in response to which
         // we'll attach the terminal's Xaml control to the Xaml root.
-        _tabView.SelectedItem(tabViewItem);
+        _tabView.SelectedIndex(_tabs.Size() - 1);
     }
 
     // Method Description:
@@ -784,7 +779,8 @@ namespace winrt::TerminalApp::implementation
 
         // collapse/show the row that the tabs are in.
         // NaN is the special value XAML uses for "Auto" sizing.
-        _tabRow.Height(isVisible ? NAN : 0);
+        // TODO: How do i make a tab view height 0
+        //_tabView.Height(isVisible ? NAN : 0);
     }
 
     // Method Description:
@@ -1535,12 +1531,10 @@ namespace winrt::TerminalApp::implementation
     // - eventArgs: the event's constituent arguments
     void TerminalPage::_OnTabClick(const IInspectable& sender, const Windows::UI::Xaml::Input::PointerRoutedEventArgs& eventArgs)
     {
-        if (eventArgs.GetCurrentPoint(*this).Properties().IsMiddleButtonPressed())
+        if (auto tabViewItem = sender.try_as<MUX::Controls::TabViewItem>())
         {
-            _RemoveTabViewItem(sender.as<MUX::Controls::TabViewItem>());
-            eventArgs.Handled(true);
         }
-        else if (eventArgs.GetCurrentPoint(*this).Properties().IsRightButtonPressed())
+        if (eventArgs.GetCurrentPoint(*this).Properties().IsRightButtonPressed())
         {
             eventArgs.Handled(true);
         }
@@ -1628,8 +1622,54 @@ namespace winrt::TerminalApp::implementation
     // - eventArgs: the event's constituent arguments
     void TerminalPage::_OnTabCloseRequested(const IInspectable& /*sender*/, const MUX::Controls::TabViewTabCloseRequestedEventArgs& eventArgs)
     {
-        const auto tabViewItem = eventArgs.Tab();
-        _RemoveTabViewItem(tabViewItem);
+        const auto tabProj = eventArgs.Item().as<TerminalApp::Tab>();
+
+        uint32_t tabIndex = 0;
+        if (!_tabs.IndexOf(tabProj, tabIndex))
+        {
+            return;
+        }
+
+        _tabs.RemoveAt(tabIndex);
+
+        const auto tabImpl = _GetStrongTabImpl(tabProj);
+        tabImpl->Shutdown();
+
+        if (_tabs.Size() == 0)
+        {
+            _lastTabClosedHandlers(*this, nullptr);
+        }
+        else if (_isFullscreen)
+        {
+            // GH#5799 - If we're fullscreen, the TabView isn't visible. If it's
+            // not Visible, it's _not_ going to raise a SelectionChanged event,
+            // which is what we usually use to focus another tab. Instead, we'll
+            // have to do it manually here.
+            //
+            // We can't use
+            //   auto selectedIndex = _tabView.SelectedIndex();
+            // Because this will always return -1 in this scenario unfortunately.
+            //
+            // So, what we're going to try to do is move the focus to the tab
+            // to the left, within the bounds of how many tabs we have.
+            //
+            // EX: we have 4 tabs: [A, B, C, D]. If we close:
+            // * A (tabIndex=0): We'll want to focus tab B (now in index 0)
+            // * B (tabIndex=1): We'll want to focus tab A (now in index 0)
+            // * C (tabIndex=2): We'll want to focus tab B (now in index 1)
+            // * D (tabIndex=3): We'll want to focus tab C (now in index 2)
+            const auto newSelectedIndex = std::clamp<int32_t>(tabIndex - 1, 0, _tabs.Size());
+            // _UpdatedSelectedTab will do the work of setting up the new tab as
+            // the focused one, and unfocusing all the others.
+            _UpdatedSelectedTab(newSelectedIndex);
+
+            // Also, we need to _manually_ set the SelectedItem of the tabView
+            // here. If we don't, then the TabView will technically not have a
+            // selected item at all, which can make things like ClosePane not
+            // work correctly.
+            //auto newSelectedTab{ _GetStrongTabImpl(newSelectedIndex) };
+            _tabView.SelectedIndex(newSelectedIndex);
+        }
     }
 
     // Method Description:
@@ -2025,10 +2065,18 @@ namespace winrt::TerminalApp::implementation
         // TODO GH#3327: Look at what to do with the NC area when we have XAML theming
     }
 
-    //Windows::Foundation::Collections::IObservableVector<TerminalApp::Tab> TerminalPage::Tabs()
-    //{
-    //    return _tabs;
-    //}
+    Windows::Foundation::Collections::IObservableVector<TerminalApp::Tab> TerminalPage::Tabs()
+    {
+        return _tabs;
+    }
+
+    // Method Description:
+    // - Bound in the Xaml editor to the [+] button.
+    // Arguments:
+    // <unused>
+    void TerminalPage::OnNewTabButtonClick(IInspectable const&, MUX::Controls::SplitButtonClickEventArgs const&)
+    {
+    }
 
     // -------------------------------- WinRT Events ---------------------------------
     // Winrt events need a method for adding a callback to the event and removing the callback.

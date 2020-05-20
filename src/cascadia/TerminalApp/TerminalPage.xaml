@@ -16,7 +16,7 @@ the MIT License. See LICENSE in the project root for license information. -->
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!--<mux:TabView x:Name="TabView"
+        <mux:TabView x:Name="TabView"
                  Grid.Row="0"
                  VerticalAlignment="Bottom"
                  HorizontalContentAlignment="Stretch"
@@ -25,11 +25,17 @@ the MIT License. See LICENSE in the project root for license information. -->
                  CanReorderTabs="True"
                  CanDragTabs="True"
                  AllowDropTabs="True"
-                 TabItemsSource="{x:Bind Tabs, Mode=OneWay}">
+                 TabItemsSource="{x:Bind Tabs, Mode=OneWay}"
+                 SelectionChanged="_OnTabSelectionChanged"
+                 TabCloseRequested="_OnTabCloseRequested"
+                 TabItemsChanged="_OnTabItemsChanged">
 
             <mux:TabView.TabItemTemplate>
                 <DataTemplate x:DataType="local:Tab">
-                    <mux:TabViewItem Header="{x:Bind Title}" IconSource="{x:Bind Icon}" />
+                    <mux:TabViewItem
+                        Header="{x:Bind Title, Mode=OneWay}"
+                        IconSource="{x:Bind IconSource, Mode=OneWay}"
+                        PointerPressed="_OnTabClick"/>
                 </DataTemplate>
             </mux:TabView.TabItemTemplate>
 
@@ -46,9 +52,9 @@ the MIT License. See LICENSE in the project root for license information. -->
                 FontWeight="SemiLight"
                 FontSize="12"
                 AutomationProperties.AccessibilityView="Control">
-                    --><!-- U+E710 is the fancy plus icon. --><!--
+                    <!-- U+E710 is the fancy plus icon. -->
                     <mux:SplitButton.Resources>
-                        --><!-- Override the SplitButton* resources to match the tab view's button's styles. --><!--
+                        <!-- Override the SplitButton* resources to match the tab view's button's styles. -->
                         <ResourceDictionary>
                             <ResourceDictionary.ThemeDictionaries>
                                 <ResourceDictionary x:Key="Light">
@@ -81,9 +87,7 @@ the MIT License. See LICENSE in the project root for license information. -->
                 </mux:SplitButton>
             </mux:TabView.TabStripFooter>
 
-        </mux:TabView>-->
-
-        <local:TabRowControl x:Name="TabRow" Grid.Row="0" />
+        </mux:TabView>
 
         <Grid x:Name="TabContent" Grid.Row="1" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" />
 

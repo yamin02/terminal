@@ -53,7 +53,9 @@ namespace winrt::TerminalApp::implementation
         winrt::hstring ParseCommandlineMessage();
         bool ShouldExitEarly();
 
-        //Windows::Foundation::Collections::IObservableVector<winrt::TerminalApp::Tab> Tabs();
+        Windows::Foundation::Collections::IObservableVector<winrt::TerminalApp::Tab> Tabs();
+
+        void OnNewTabButtonClick(IInspectable const&, winrt::Microsoft::UI::Xaml::Controls::SplitButtonClickEventArgs const&);
 
         // -------------------------------- WinRT Events ---------------------------------
         DECLARE_EVENT_WITH_TYPED_EVENT_HANDLER(TitleChanged, _titleChangeHandlers, winrt::Windows::Foundation::IInspectable, winrt::hstring);
