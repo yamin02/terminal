@@ -138,9 +138,6 @@ namespace winrt::TerminalApp::implementation
                 page->_OpenNewTab(nullptr);
             }
         });
-        //_tabView.SelectionChanged({ this, &TerminalPage::_OnTabSelectionChanged });
-        //_tabView.TabCloseRequested({ this, &TerminalPage::_OnTabCloseRequested });
-        //_tabView.TabItemsChanged({ this, &TerminalPage::_OnTabItemsChanged });
 
         _CreateNewTabFlyout();
 
@@ -983,8 +980,7 @@ namespace winrt::TerminalApp::implementation
         {
             if (_startupState == StartupState::InStartup)
             {
-                auto tab{ _GetStrongTabImpl(tabIndex) };
-                _tabView.SelectedItem(tab->GetTabViewItem());
+                _tabView.SelectedIndex(tabIndex);
                 _UpdatedSelectedTab(tabIndex);
             }
             else
@@ -1064,8 +1060,7 @@ namespace winrt::TerminalApp::implementation
 
         if (auto page{ weakThis.get() })
         {
-            auto tab{ _GetStrongTabImpl(tabIndex) };
-            _tabView.SelectedItem(tab->GetTabViewItem());
+            _tabView.SelectedIndex(tabIndex);
         }
     }
 
