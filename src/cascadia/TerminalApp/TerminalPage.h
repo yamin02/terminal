@@ -139,7 +139,7 @@ namespace winrt::TerminalApp::implementation
         void _CloseFocusedPane();
         void _CloseAllTabs();
 
-        winrt::fire_and_forget _RemoveOnCloseRoutine(winrt::TerminalApp::Tab tabViewItem, winrt::com_ptr<TerminalPage> page);
+        void _RemoveOnCloseRoutine(winrt::TerminalApp::Tab tabViewItem, winrt::com_ptr<TerminalPage> page);
 
         // Todo: add more event implementations here
         // MSFT:20641986: Add keybindings for New Window

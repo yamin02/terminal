@@ -452,10 +452,8 @@ namespace winrt::TerminalApp::implementation
     }
     CATCH_LOG();
 
-    winrt::fire_and_forget TerminalPage::_RemoveOnCloseRoutine(TerminalApp::Tab tab, winrt::com_ptr<TerminalPage> page)
+    void TerminalPage::_RemoveOnCloseRoutine(TerminalApp::Tab tab, winrt::com_ptr<TerminalPage> page)
     {
-        co_await winrt::resume_foreground(page->_tabView.Dispatcher());
-
         uint32_t tabIndex = 0;
         if (!_tabs.IndexOf(tab, tabIndex))
         {
@@ -527,8 +525,6 @@ namespace winrt::TerminalApp::implementation
             newTabImpl->UpdateIcon(profile->GetExpandedIconPath());
         }
 
-        // CREATE NEW TAB
-
         // When the tab is closed, remove it from our list of tabs.
         newTabImpl->Closed([newTabImpl, weakThis{ get_weak() }](auto&& /*s*/, auto&& /*e*/) {
             if (auto page{ weakThis.get() })
@@ -547,7 +543,12 @@ namespace winrt::TerminalApp::implementation
 
         // This kicks off TabView::SelectionChanged, in response to which
         // we'll attach the terminal's Xaml control to the Xaml root.
-        _tabView.SelectedIndex(_tabs.Size() - 1);
+        int currIndex = _tabView.SelectedIndex();
+        int indx = _tabs.Size() - 1;
+        if (currIndex == indx)
+        {
+        }
+        _tabView.SelectedIndex(indx);
     }
 
     // Method Description:
@@ -852,36 +853,36 @@ namespace winrt::TerminalApp::implementation
         {
             _lastTabClosedHandlers(*this, nullptr);
         }
-        else if (_isFullscreen)
-        {
-            // GH#5799 - If we're fullscreen, the TabView isn't visible. If it's
-            // not Visible, it's _not_ going to raise a SelectionChanged event,
-            // which is what we usually use to focus another tab. Instead, we'll
-            // have to do it manually here.
-            //
-            // We can't use
-            //   auto selectedIndex = _tabView.SelectedIndex();
-            // Because this will always return -1 in this scenario unfortunately.
-            //
-            // So, what we're going to try to do is move the focus to the tab
-            // to the left, within the bounds of how many tabs we have.
-            //
-            // EX: we have 4 tabs: [A, B, C, D]. If we close:
-            // * A (tabIndex=0): We'll want to focus tab B (now in index 0)
-            // * B (tabIndex=1): We'll want to focus tab A (now in index 0)
-            // * C (tabIndex=2): We'll want to focus tab B (now in index 1)
-            // * D (tabIndex=3): We'll want to focus tab C (now in index 2)
-            const auto newSelectedIndex = std::clamp<int32_t>(tabIndex - 1, 0, _tabs.Size());
-            // _UpdatedSelectedTab will do the work of setting up the new tab as
-            // the focused one, and unfocusing all the others.
-            _UpdatedSelectedTab(newSelectedIndex);
+        //else if (_isFullscreen)
+        //{
+        // GH#5799 - If we're fullscreen, the TabView isn't visible. If it's
+        // not Visible, it's _not_ going to raise a SelectionChanged event,
+        // which is what we usually use to focus another tab. Instead, we'll
+        // have to do it manually here.
+        //
+        // We can't use
+        //   auto selectedIndex = _tabView.SelectedIndex();
+        // Because this will always return -1 in this scenario unfortunately.
+        //
+        // So, what we're going to try to do is move the focus to the tab
+        // to the left, within the bounds of how many tabs we have.
+        //
+        // EX: we have 4 tabs: [A, B, C, D]. If we close:
+        // * A (tabIndex=0): We'll want to focus tab B (now in index 0)
+        // * B (tabIndex=1): We'll want to focus tab A (now in index 0)
+        // * C (tabIndex=2): We'll want to focus tab B (now in index 1)
+        // * D (tabIndex=3): We'll want to focus tab C (now in index 2)
+        const auto newSelectedIndex = std::clamp<int32_t>(tabIndex - 1, 0, _tabs.Size());
+        // _UpdatedSelectedTab will do the work of setting up the new tab as
+        // the focused one, and unfocusing all the others.
+        _UpdatedSelectedTab(newSelectedIndex);
 
-            // Also, we need to _manually_ set the SelectedItem of the tabView
-            // here. If we don't, then the TabView will technically not have a
-            // selected item at all, which can make things like ClosePane not
-            // work correctly.
-            _tabView.SelectedIndex(newSelectedIndex);
-        }
+        // Also, we need to _manually_ set the SelectedItem of the tabView
+        // here. If we don't, then the TabView will technically not have a
+        // selected item at all, which can make things like ClosePane not
+        // work correctly.
+        _tabView.SelectedIndex(newSelectedIndex);
+        //}
     }
 
     // Method Description:
@@ -1528,11 +1529,8 @@ namespace winrt::TerminalApp::implementation
     // Arguments:
     // - sender: the control that originated this event (TabViewItem)
     // - eventArgs: the event's constituent arguments
-    void TerminalPage::_OnTabClick(const IInspectable& sender, const Windows::UI::Xaml::Input::PointerRoutedEventArgs& eventArgs)
+    void TerminalPage::_OnTabClick(const IInspectable& /*sender*/, const Windows::UI::Xaml::Input::PointerRoutedEventArgs& eventArgs)
     {
-        if (auto tabViewItem = sender.try_as<MUX::Controls::TabViewItem>())
-        {
-        }
         if (eventArgs.GetCurrentPoint(*this).Properties().IsRightButtonPressed())
         {
             eventArgs.Handled(true);
