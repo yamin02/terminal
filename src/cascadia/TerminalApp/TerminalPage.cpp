@@ -64,7 +64,6 @@ namespace winrt::TerminalApp::implementation
 
         _tabContent = this->TabContent();
         _tabView = TabView();
-        _rearranging = false;
 
         // GH#2455 - Make sure to try/catch calls to Application::Current,
         // because that _won't_ be an instance of TerminalApp::App in the
@@ -82,35 +81,6 @@ namespace winrt::TerminalApp::implementation
 
         _tabView.CanReorderTabs(!isElevated);
         _tabView.CanDragTabs(!isElevated);
-
-        _tabView.TabDragStarting([weakThis{ get_weak() }](auto&& /*o*/, auto&& /*a*/) {
-            if (auto page{ weakThis.get() })
-            {
-                page->_rearranging = true;
-                page->_rearrangeFrom = std::nullopt;
-                page->_rearrangeTo = std::nullopt;
-            }
-        });
-
-        _tabView.TabDragCompleted([weakThis{ get_weak() }](auto&& /*o*/, auto&& /*a*/) {
-            if (auto page{ weakThis.get() })
-            {
-                auto& from{ page->_rearrangeFrom };
-                auto& to{ page->_rearrangeTo };
-
-                if (from.has_value() && to.has_value() && to != from)
-                {
-                    auto& tabs{ page->_tabs };
-                    auto tab = tabs.GetAt(from.value());
-                    tabs.RemoveAt(from.value());
-                    tabs.InsertAt(to.value(), tab);
-                }
-
-                page->_rearranging = false;
-                from = std::nullopt;
-                to = std::nullopt;
-            }
-        });
 
         _newTabButton = NewTabButton();
 
@@ -1506,23 +1476,10 @@ namespace winrt::TerminalApp::implementation
     // Arguments:
     // - sender: the control that originated this event
     // - eventArgs: the event's constituent arguments
-    void TerminalPage::_OnTabItemsChanged(const IInspectable& /*sender*/, const Windows::Foundation::Collections::IVectorChangedEventArgs& eventArgs)
-    {
-        if (_rearranging)
-        {
-            if (eventArgs.CollectionChange() == Windows::Foundation::Collections::CollectionChange::ItemRemoved)
-            {
-                _rearrangeFrom = eventArgs.Index();
-            }
-
-            if (eventArgs.CollectionChange() == Windows::Foundation::Collections::CollectionChange::ItemInserted)
-            {
-                _rearrangeTo = eventArgs.Index();
-            }
-        }
-
-        _UpdateTabView();
-    }
+    //void TerminalPage::_OnTabItemsChanged(const IInspectable& /*sender*/, const Windows::Foundation::Collections::IVectorChangedEventArgs& eventArgs)
+    //{
+    //    _UpdateTabView();
+    //}
 
     // Method Description:
     // - Additional responses to clicking on a TabView's item. Currently, just remove tab with middle click
@@ -1583,12 +1540,9 @@ namespace winrt::TerminalApp::implementation
     // - eventArgs: the event's constituent arguments
     void TerminalPage::_OnTabSelectionChanged(const IInspectable& sender, const WUX::Controls::SelectionChangedEventArgs& /*eventArgs*/)
     {
-        if (!_rearranging)
-        {
-            auto tabView = sender.as<MUX::Controls::TabView>();
-            auto selectedIndex = tabView.SelectedIndex();
-            _UpdatedSelectedTab(selectedIndex);
-        }
+        auto tabView = sender.as<MUX::Controls::TabView>();
+        auto selectedIndex = tabView.SelectedIndex();
+        _UpdatedSelectedTab(selectedIndex);
     }
 
     // Method Description:

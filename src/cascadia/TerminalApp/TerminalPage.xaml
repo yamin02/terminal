@@ -27,8 +27,7 @@ the MIT License. See LICENSE in the project root for license information. -->
                  AllowDropTabs="True"
                  TabItemsSource="{x:Bind Tabs, Mode=OneWay}"
                  SelectionChanged="_OnTabSelectionChanged"
-                 TabCloseRequested="_OnTabCloseRequested"
-                 TabItemsChanged="_OnTabItemsChanged">
+                 TabCloseRequested="_OnTabCloseRequested">
 
             <mux:TabView.TabItemTemplate>
                 <DataTemplate x:DataType="local:Tab">
