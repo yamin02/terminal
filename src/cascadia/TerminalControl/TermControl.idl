@@ -5,6 +5,7 @@ import "IMouseWheelListener.idl";
 
 namespace Microsoft.Terminal.TerminalControl
 {
+    delegate void TerminalInitializedEventArgs();
     delegate void TitleChangedEventArgs(String newTitle);
     delegate void FontSizeChangedEventArgs(Int32 width, Int32 height, Boolean isInitialChange);
     delegate void ScrollPositionChangedEventArgs(Int32 viewTop, Int32 viewHeight, Int32 bufferLength);
@@ -43,6 +44,7 @@ namespace Microsoft.Terminal.TerminalControl
 
         event TitleChangedEventArgs TitleChanged;
         event FontSizeChangedEventArgs FontSizeChanged;
+        event TerminalInitializedEventArgs TerminalInitialized;
         event Windows.Foundation.TypedEventHandler<TermControl, CopyToClipboardEventArgs> CopyToClipboard;
         event Windows.Foundation.TypedEventHandler<TermControl, PasteFromClipboardEventArgs> PasteFromClipboard;
 

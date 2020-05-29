@@ -70,6 +70,8 @@ namespace winrt::TerminalApp::implementation
         winrt::TerminalApp::ColorPickupFlyout _tabColorPickup{};
         std::optional<winrt::Windows::UI::Color> _tabColor{};
 
+        bool _controlInitialized{ false };
+
         bool _focused{ false };
         winrt::Microsoft::UI::Xaml::Controls::TabViewItem _tabViewItem{ nullptr };
 

@@ -660,6 +660,8 @@ namespace winrt::Microsoft::Terminal::TerminalControl::implementation
             this->Focus(FocusState::Programmatic);
 
             _initializedTerminal = true;
+
+            _terminalInitializedHandlers();
         } // scope for TerminalLock
 
         // Start the connection outside of lock, because it could
@@ -2685,6 +2687,7 @@ namespace winrt::Microsoft::Terminal::TerminalControl::implementation
     // -------------------------------- WinRT Events ---------------------------------
     // Winrt events need a method for adding a callback to the event and removing the callback.
     // These macros will define them both for you.
+    DEFINE_EVENT(TermControl, TerminalInitialized, _terminalInitializedHandlers, TerminalControl::TerminalInitializedEventArgs);
     DEFINE_EVENT(TermControl, TitleChanged, _titleChangedHandlers, TerminalControl::TitleChangedEventArgs);
     DEFINE_EVENT(TermControl, FontSizeChanged, _fontSizeChangedHandlers, TerminalControl::FontSizeChangedEventArgs);
     DEFINE_EVENT(TermControl, ScrollPositionChanged, _scrollPositionChangedHandlers, TerminalControl::ScrollPositionChangedEventArgs);

@@ -513,12 +513,7 @@ namespace winrt::TerminalApp::implementation
 
         // This kicks off TabView::SelectionChanged, in response to which
         // we'll attach the terminal's Xaml control to the Xaml root.
-        int currIndex = _tabView.SelectedIndex();
-        int indx = _tabs.Size() - 1;
-        if (currIndex == indx)
-        {
-        }
-        _tabView.SelectedIndex(indx);
+        _tabView.SelectedIndex(_tabs.Size() - 1);
     }
 
     // Method Description:
@@ -791,21 +786,6 @@ namespace winrt::TerminalApp::implementation
     }
 
     // Method Description:
-    // - Look for the index of the input tabView in the tabs vector,
-    //   and call _RemoveTabViewItemByIndex
-    // Arguments:
-    // - tabViewItem: the TabViewItem in the TabView that is being removed.
-    //void TerminalPage::_RemoveTabViewItem(const MUX::Controls::TabViewItem& tabViewItem)
-    //{
-    //    uint32_t tabIndexFromControl = 0;
-    //    if (_tabView.TabItems().IndexOf(tabViewItem, tabIndexFromControl))
-    //    {
-    //        // If IndexOf returns true, we've actually got an index
-    //        _RemoveTabViewItemByIndex(tabIndexFromControl);
-    //    }
-    //}
-
-    // Method Description:
     // - Removes the tab (both TerminalControl and XAML)
     // Arguments:
     // - tabIndex: the index of the tab to be removed
@@ -952,7 +932,6 @@ namespace winrt::TerminalApp::implementation
             if (_startupState == StartupState::InStartup)
             {
                 _tabView.SelectedIndex(tabIndex);
-                _UpdatedSelectedTab(tabIndex);
             }
             else
             {
@@ -1003,12 +982,13 @@ namespace winrt::TerminalApp::implementation
     {
         // GH#1117: This is a workaround because _tabView.SelectedIndex()
         //          sometimes return incorrect result after removing some tabs
-        uint32_t focusedIndex;
-        if (_tabView.TabItems().IndexOf(_tabView.SelectedItem(), focusedIndex))
-        {
-            return focusedIndex;
-        }
-        return std::nullopt;
+        //uint32_t focusedIndex;
+        //if (_tabView.TabItems().IndexOf(_tabView.SelectedItem(), focusedIndex))
+        //{
+        //    return focusedIndex;
+        //}
+        //return std::nullopt;
+        return _tabView.SelectedIndex();
     }
 
     // Method Description:
@@ -1467,19 +1447,6 @@ namespace winrt::TerminalApp::implementation
             ShellExecute(nullptr, nullptr, L"notepad", settingsPath.c_str(), nullptr, SW_SHOW);
         }
     }
-
-    // Method Description:
-    // - Responds to changes in the TabView's item list by changing the tabview's
-    //      visibility.  This method is also invoked when tabs are dragged / dropped as part of tab reordering
-    //      and this method hands that case as well in concert with TabDragStarting and TabDragCompleted handlers
-    //      that are set up in TerminalPage::Create()
-    // Arguments:
-    // - sender: the control that originated this event
-    // - eventArgs: the event's constituent arguments
-    //void TerminalPage::_OnTabItemsChanged(const IInspectable& /*sender*/, const Windows::Foundation::Collections::IVectorChangedEventArgs& eventArgs)
-    //{
-    //    _UpdateTabView();
-    //}
 
     // Method Description:
     // - Additional responses to clicking on a TabView's item. Currently, just remove tab with middle click

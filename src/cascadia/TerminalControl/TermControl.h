@@ -101,6 +101,7 @@ namespace winrt::Microsoft::Terminal::TerminalControl::implementation
 
         // clang-format off
         // -------------------------------- WinRT Events ---------------------------------
+        DECLARE_EVENT(TerminalInitialized,      _terminalInitializedHandlers,       TerminalControl::TerminalInitializedEventArgs);
         DECLARE_EVENT(TitleChanged,             _titleChangedHandlers,              TerminalControl::TitleChangedEventArgs);
         DECLARE_EVENT(FontSizeChanged,          _fontSizeChangedHandlers,           TerminalControl::FontSizeChangedEventArgs);
         DECLARE_EVENT(ScrollPositionChanged,    _scrollPositionChangedHandlers,     TerminalControl::ScrollPositionChangedEventArgs);

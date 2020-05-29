@@ -176,6 +176,11 @@ namespace winrt::TerminalApp::implementation
     // - <none>
     void Tab::_Focus()
     {
+        if (!_controlInitialized)
+        {
+            return;
+        }
+
         _focused = true;
 
         auto lastFocusedControl = GetActiveTerminalControl();
@@ -407,6 +412,16 @@ namespace winrt::TerminalApp::implementation
             if (isInitialChange)
             {
                 _rootPane->Relayout();
+            }
+        });
+
+        // Once we know that TermControl has finished its InitializeTerminal steps, we can go
+        // ahead and tell this tab to be focused.
+        control.TerminalInitialized([weakThis] {
+            if (auto tab{ weakThis.get() })
+            {
+                tab->_controlInitialized = true;
+                tab->_Focus();
             }
         });
     }
