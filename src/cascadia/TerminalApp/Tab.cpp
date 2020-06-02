@@ -93,6 +93,7 @@ namespace winrt::TerminalApp::implementation
     void Tab::Initialize(const TermControl& control)
     {
         _BindEventHandlers(control);
+        _CreateContextMenu();
     }
 
     // Method Description:
@@ -501,35 +502,35 @@ namespace winrt::TerminalApp::implementation
     {
         auto weakThis{ get_weak() };
 
-        // Close
-        Controls::MenuFlyoutItem closeTabMenuItem;
-        Controls::FontIcon closeSymbol;
-        closeSymbol.FontFamily(Media::FontFamily{ L"Segoe MDL2 Assets" });
-        closeSymbol.Glyph(L"\xE8BB");
+        //// Close
+        //Controls::MenuFlyoutItem closeTabMenuItem;
+        //Controls::FontIcon closeSymbol;
+        //closeSymbol.FontFamily(Media::FontFamily{ L"Segoe MDL2 Assets" });
+        //closeSymbol.Glyph(L"\xE8BB");
 
-        closeTabMenuItem.Click([weakThis](auto&&, auto&&) {
-            if (auto tab{ weakThis.get() })
-            {
-                tab->_rootPane->Close();
-            }
-        });
-        closeTabMenuItem.Text(RS_(L"TabClose"));
-        closeTabMenuItem.Icon(closeSymbol);
+        //closeTabMenuItem.Click([weakThis](auto&&, auto&&) {
+        //    if (auto tab{ weakThis.get() })
+        //    {
+        //        tab->_rootPane->Close();
+        //    }
+        //});
+        //closeTabMenuItem.Text(RS_(L"TabClose"));
+        //closeTabMenuItem.Icon(closeSymbol);
 
-        // "Color..."
-        Controls::MenuFlyoutItem chooseColorMenuItem;
-        Controls::FontIcon colorPickSymbol;
-        colorPickSymbol.FontFamily(Media::FontFamily{ L"Segoe MDL2 Assets" });
-        colorPickSymbol.Glyph(L"\xE790");
+        //// "Color..."
+        //Controls::MenuFlyoutItem chooseColorMenuItem;
+        //Controls::FontIcon colorPickSymbol;
+        //colorPickSymbol.FontFamily(Media::FontFamily{ L"Segoe MDL2 Assets" });
+        //colorPickSymbol.Glyph(L"\xE790");
 
-        chooseColorMenuItem.Click([weakThis](auto&&, auto&&) {
-            if (auto tab{ weakThis.get() })
-            {
-                tab->_tabColorPickup.ShowAt(tab->_tabViewItem);
-            }
-        });
-        chooseColorMenuItem.Text(RS_(L"TabColorChoose"));
-        chooseColorMenuItem.Icon(colorPickSymbol);
+        //chooseColorMenuItem.Click([weakThis](auto&&, auto&&) {
+        //    if (auto tab{ weakThis.get() })
+        //    {
+        //        tab->_tabColorPickup.ShowAt(tab->_tabViewItem);
+        //    }
+        //});
+        //chooseColorMenuItem.Text(RS_(L"TabColorChoose"));
+        //chooseColorMenuItem.Icon(colorPickSymbol);
 
         // Color Picker (it's convenient to have it here)
         _tabColorPickup.ColorSelected([weakThis](auto newTabColor) {
@@ -546,13 +547,13 @@ namespace winrt::TerminalApp::implementation
             }
         });
 
-        // Build the menu
-        Controls::MenuFlyout newTabFlyout;
-        Controls::MenuFlyoutSeparator menuSeparator;
-        newTabFlyout.Items().Append(chooseColorMenuItem);
-        newTabFlyout.Items().Append(menuSeparator);
-        newTabFlyout.Items().Append(closeTabMenuItem);
-        _tabViewItem.ContextFlyout(newTabFlyout);
+        //// Build the menu
+        //Controls::MenuFlyout newTabFlyout;
+        //Controls::MenuFlyoutSeparator menuSeparator;
+        //newTabFlyout.Items().Append(chooseColorMenuItem);
+        //newTabFlyout.Items().Append(menuSeparator);
+        //newTabFlyout.Items().Append(closeTabMenuItem);
+        //_tabViewItem.ContextFlyout(newTabFlyout);
     }
 
     // Method Description:

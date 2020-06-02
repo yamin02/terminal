@@ -57,7 +57,6 @@ namespace winrt::TerminalApp::implementation
 
         winrt::Microsoft::UI::Xaml::Controls::TabViewItem _tabViewItem{ nullptr };
 
-        void _CreateContextMenu();
         void _OnCloseTabMenuItemClick(const IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& e);
         void _OnColorMenuItemClick(const IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& e);
 
@@ -83,6 +82,8 @@ namespace winrt::TerminalApp::implementation
 
         //void _MakeTabViewItem();
         void _Focus();
+
+        void _CreateContextMenu();
 
         void _SetTabColor(const winrt::Windows::UI::Color& color);
         void _ResetTabColor();
