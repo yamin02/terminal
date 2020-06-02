@@ -472,6 +472,23 @@ namespace winrt::TerminalApp::implementation
         });
     }
 
+    void Tab::_OnCloseTabMenuItemClick(const IInspectable& /*sender*/, const Windows::UI::Xaml::RoutedEventArgs& /*e*/)
+    {
+        _rootPane->Close();
+    }
+
+    void Tab::_OnColorMenuItemClick(const IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& /*e*/)
+    {
+        if (auto menuItem = sender.try_as<Windows::UI::Xaml::Controls::MenuFlyoutItem>())
+        {
+            if (auto menuFlyout = menuItem.Parent().try_as<Windows::UI::Xaml::Controls::MenuFlyout>())
+            {
+                auto tabViewItem = winrt::Windows::UI::Xaml::Media::VisualTreeHelper::GetParent(menuFlyout).try_as<Microsoft::UI::Xaml::Controls::TabViewItem>();
+                _tabColorPickup.ShowAt(tabViewItem);
+            }
+        }
+    }
+
     // Method Description:
     // - Creates a context menu attached to the tab.
     // Currently contains elements allowing to select or

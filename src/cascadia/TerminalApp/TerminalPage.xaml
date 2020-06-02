@@ -34,7 +34,27 @@ the MIT License. See LICENSE in the project root for license information. -->
                     <mux:TabViewItem
                         Header="{x:Bind Title, Mode=OneWay}"
                         IconSource="{x:Bind IconSource, Mode=OneWay}"
-                        PointerPressed="_OnTabClick"/>
+                        PointerPressed="_OnTabClick">
+
+                        <mux:TabViewItem.ContextFlyout>
+                            <MenuFlyout>
+                                <MenuFlyoutItem Text="TabColorChoose" Click="{x:Bind _OnColorMenuItemClick}">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="\xE790"/>
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+
+                                <MenuFlyoutSeparator/>
+
+                                <MenuFlyoutItem Text="TabClose" Click="{x:Bind _OnCloseTabMenuItemClick}">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="\xE8BB"/>
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                            </MenuFlyout>
+                        </mux:TabViewItem.ContextFlyout>
+                        
+                    </mux:TabViewItem>
                 </DataTemplate>
             </mux:TabView.TabItemTemplate>
 

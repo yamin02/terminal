@@ -4,6 +4,7 @@
 #pragma once
 #include "Pane.h"
 #include "ColorPickupFlyout.h"
+#include "winrt/Windows.UI.Xaml.h"
 #include "Tab.g.h"
 
 // fwdecl unittest classes
@@ -57,6 +58,8 @@ namespace winrt::TerminalApp::implementation
         winrt::Microsoft::UI::Xaml::Controls::TabViewItem _tabViewItem{ nullptr };
 
         void _CreateContextMenu();
+        void _OnCloseTabMenuItemClick(const IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& e);
+        void _OnColorMenuItemClick(const IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& e);
 
         WINRT_CALLBACK(Closed, winrt::Windows::Foundation::EventHandler<winrt::Windows::Foundation::IInspectable>);
         WINRT_CALLBACK(PropertyChanged, Windows::UI::Xaml::Data::PropertyChangedEventHandler);

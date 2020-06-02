@@ -7,5 +7,8 @@ namespace TerminalApp
     {
         String Title { get; };
         Microsoft.UI.Xaml.Controls.BitmapIconSource IconSource { get; };
+
+        void _OnCloseTabMenuItemClick(IInspectable sender, Windows.UI.Xaml.RoutedEventArgs e);
+        void _OnColorMenuItemClick(IInspectable sender, Windows.UI.Xaml.RoutedEventArgs e);
     }
 }
