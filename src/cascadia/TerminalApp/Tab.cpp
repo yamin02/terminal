@@ -31,8 +31,6 @@ namespace winrt::TerminalApp::implementation
         });
 
         _activePane = _rootPane;
-
-        _MakeTabViewItem();
     }
 
     // Method Description:
@@ -41,10 +39,10 @@ namespace winrt::TerminalApp::implementation
     // - <none>
     // Return Value:
     // - <none>
-    void Tab::_MakeTabViewItem()
-    {
-        _tabViewItem = ::winrt::MUX::Controls::TabViewItem{};
-    }
+    //void Tab::_SetTabViewItem(::winrt::MUX::Controls::TabViewItem tabViewItem)
+    //{
+    //    _tabViewItem = ::winrt::MUX::Controls::TabViewItem{};
+    //}
 
     // Method Description:
     // - Get the root UIElement of this Tab's root pane.
@@ -95,7 +93,6 @@ namespace winrt::TerminalApp::implementation
     void Tab::Initialize(const TermControl& control)
     {
         _BindEventHandlers(control);
-        _CreateContextMenu();
     }
 
     // Method Description:
@@ -208,13 +205,14 @@ namespace winrt::TerminalApp::implementation
 
         auto weakThis{ get_weak() };
 
-        co_await winrt::resume_foreground(_tabViewItem.Dispatcher());
+        auto control = GetActiveTerminalControl();
+
+        co_await winrt::resume_foreground(control.Dispatcher());
 
         if (auto tab{ weakThis.get() })
         {
             auto newIconSource = GetColoredIcon<winrt::MUX::Controls::BitmapIconSource>(_lastIconPath);
             IconSource(newIconSource);
-            _tabViewItem.IconSource(newIconSource);
         }
     }
 
@@ -243,12 +241,14 @@ namespace winrt::TerminalApp::implementation
         winrt::hstring textCopy{ text };
         auto weakThis{ get_weak() };
 
-        co_await winrt::resume_foreground(_tabViewItem.Dispatcher());
+        auto control = GetActiveTerminalControl();
+
+        co_await winrt::resume_foreground(control.Dispatcher());
 
         if (auto tab{ weakThis.get() })
         {
-            Title(text);
-            _tabViewItem.Header(winrt::box_value(text));
+            tab->Title(text);
+            //_tabViewItem.Header(winrt::box_value(text));
         }
     }
 

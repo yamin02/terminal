@@ -1461,6 +1461,21 @@ namespace winrt::TerminalApp::implementation
         }
     }
 
+    void TerminalPage::_OnTabLoaded(const IInspectable& sender, const Windows::UI::Xaml::Input::PointerRoutedEventArgs& /*eventArgs*/)
+    {
+        MUX::Controls::TabViewItem tabViewItem;
+        if (tabViewItem = sender.try_as<MUX::Controls::TabViewItem>())
+        {
+            uint32_t tabIndex;
+            if (TabView().TabItems().IndexOf(tabViewItem, tabIndex))
+            {
+                auto tab{ _GetStrongTabImpl(tabIndex) };
+                tab->_tabViewItem = tabViewItem;
+                tab->_CreateContextMenu();
+            }
+        }
+    }
+
     void TerminalPage::_UpdatedSelectedTab(const int32_t index)
     {
         // Unfocus all the tabs.
