@@ -72,17 +72,6 @@ namespace winrt::TerminalApp::implementation
     }
 
     // Method Description:
-    // - Gets the TabViewItem that represents this Tab
-    // Arguments:
-    // - <none>
-    // Return Value:
-    // - The TabViewItem that represents this Tab
-    winrt::MUX::Controls::TabViewItem Tab::GetTabViewItem()
-    {
-        return _tabViewItem;
-    }
-
-    // Method Description:
     // - Called after construction of a Tab object to bind event handlers to its
     //   associated Pane and TermControl object and to create the context menu of
     //   the tab item
@@ -473,21 +462,22 @@ namespace winrt::TerminalApp::implementation
         });
     }
 
+    void Tab::_OnTabItemClick(const IInspectable& sender, const Windows::UI::Xaml::Input::PointerRoutedEventArgs& /*e*/)
+    {
+        if (auto temp = sender.try_as<winrt::Microsoft::UI::Xaml::Controls::TabViewItem>())
+        {
+            _tabViewItem = temp;
+        }
+    }
+
     void Tab::_OnCloseTabMenuItemClick(const IInspectable& /*sender*/, const Windows::UI::Xaml::RoutedEventArgs& /*e*/)
     {
         _rootPane->Close();
     }
 
-    void Tab::_OnColorMenuItemClick(const IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& /*e*/)
+    void Tab::_OnColorMenuItemClick(const IInspectable& /*sender*/, const Windows::UI::Xaml::RoutedEventArgs& /*e*/)
     {
-        if (auto menuItem = sender.try_as<Windows::UI::Xaml::Controls::MenuFlyoutItem>())
-        {
-            if (auto menuFlyout = menuItem.Parent().try_as<Windows::UI::Xaml::Controls::MenuFlyout>())
-            {
-                auto tabViewItem = winrt::Windows::UI::Xaml::Media::VisualTreeHelper::GetParent(menuFlyout).try_as<Microsoft::UI::Xaml::Controls::TabViewItem>();
-                _tabColorPickup.ShowAt(tabViewItem);
-            }
-        }
+        _tabColorPickup.ShowAt(_tabViewItem);
     }
 
     // Method Description:

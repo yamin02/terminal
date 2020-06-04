@@ -24,7 +24,6 @@ namespace winrt::TerminalApp::implementation
         // Called after construction to perform the necessary setup, which relies on weak_ptr
         void Initialize(const winrt::Microsoft::Terminal::TerminalControl::TermControl& control);
 
-        winrt::Microsoft::UI::Xaml::Controls::TabViewItem GetTabViewItem();
         winrt::Windows::UI::Xaml::UIElement GetRootElement();
         winrt::Microsoft::Terminal::TerminalControl::TermControl GetActiveTerminalControl() const;
         std::optional<GUID> GetFocusedProfile() const noexcept;
@@ -55,10 +54,12 @@ namespace winrt::TerminalApp::implementation
 
         std::optional<winrt::Windows::UI::Color> GetTabColor();
 
-        winrt::Microsoft::UI::Xaml::Controls::TabViewItem _tabViewItem{ nullptr };
-
         void _OnCloseTabMenuItemClick(const IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& e);
         void _OnColorMenuItemClick(const IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& e);
+
+        winrt::Microsoft::UI::Xaml::Controls::TabViewItem _tabViewItem{ nullptr };
+
+        void _OnTabItemClick(const IInspectable& sender, const Windows::UI::Xaml::Input::PointerRoutedEventArgs& e);
 
         WINRT_CALLBACK(Closed, winrt::Windows::Foundation::EventHandler<winrt::Windows::Foundation::IInspectable>);
         WINRT_CALLBACK(PropertyChanged, Windows::UI::Xaml::Data::PropertyChangedEventHandler);

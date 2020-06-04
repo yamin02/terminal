@@ -1448,18 +1448,40 @@ namespace winrt::TerminalApp::implementation
         }
     }
 
-    // Method Description:
-    // - Additional responses to clicking on a TabView's item. Currently, just remove tab with middle click
-    // Arguments:
-    // - sender: the control that originated this event (TabViewItem)
-    // - eventArgs: the event's constituent arguments
-    void TerminalPage::_OnTabClick(const IInspectable& /*sender*/, const Windows::UI::Xaml::Input::PointerRoutedEventArgs& eventArgs)
-    {
-        if (eventArgs.GetCurrentPoint(*this).Properties().IsRightButtonPressed())
-        {
-            eventArgs.Handled(true);
-        }
-    }
+    //// Method Description:
+    //// - Additional responses to clicking on a TabView's item. Currently, just remove tab with middle click
+    //// Arguments:
+    //// - sender: the control that originated this event (TabViewItem)
+    //// - eventArgs: the event's constituent arguments
+    //void TerminalPage::_OnTabClick(const IInspectable& sender, const Windows::UI::Xaml::Input::PointerRoutedEventArgs& eventArgs)
+    //{
+    //    if (eventArgs.GetCurrentPoint(*this).Properties().IsRightButtonPressed())
+    //    {
+    //        auto tvi = sender.try_as<winrt::MUX::Controls::TabViewItem>();
+    //        auto head = tvi.Header();
+    //        tvi.Header(head);
+    //        eventArgs.Handled(true);
+    //    }
+    //}
+
+    //void TerminalPage::_OnTabItemsChanged(const IInspectable& /*sender*/, const Windows::Foundation::Collections::IVectorChangedEventArgs& e)
+    //{
+    //    if (e.CollectionChange() == Windows::Foundation::Collections::CollectionChange::ItemInserted)
+    //    {
+    //        auto idx = e.Index();
+    //        auto tabItems = TabView().TabItems();
+
+    //        if (tabItems.Size() > 0)
+    //        {
+    //            auto tabItem = TabView().TabItems().GetAt(idx).try_as<TerminalApp::Tab>();
+    //            auto temp = tabItem.Title();
+    //        }
+
+    //        if (idx == 0)
+    //        {
+    //        }
+    //    }
+    //}
 
     //void TerminalPage::_OnTabLoaded(const IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& /*eventArgs*/)
     //{
