@@ -82,7 +82,6 @@ namespace winrt::TerminalApp::implementation
     void Tab::Initialize(const TermControl& control)
     {
         _BindEventHandlers(control);
-        _CreateContextMenu();
     }
 
     // Method Description:
@@ -467,6 +466,7 @@ namespace winrt::TerminalApp::implementation
         if (auto temp = sender.try_as<winrt::Microsoft::UI::Xaml::Controls::TabViewItem>())
         {
             _tabViewItem = temp;
+            _CreateContextMenu();
         }
     }
 
