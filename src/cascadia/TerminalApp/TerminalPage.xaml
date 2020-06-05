@@ -40,7 +40,7 @@ the MIT License. See LICENSE in the project root for license information. -->
                             <MenuFlyout>
                                 <MenuFlyoutItem Text="TabColorChoose" Click="{x:Bind _OnColorMenuItemClick}">
                                     <MenuFlyoutItem.Icon>
-                                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="E790"/>
+                                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE790;"/>
                                     </MenuFlyoutItem.Icon>
                                 </MenuFlyoutItem>
 
@@ -48,7 +48,7 @@ the MIT License. See LICENSE in the project root for license information. -->
 
                                 <MenuFlyoutItem Text="TabClose" Click="{x:Bind _OnCloseTabMenuItemClick}">
                                     <MenuFlyoutItem.Icon>
-                                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="E8BB"/>
+                                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE8BB;"/>
                                     </MenuFlyoutItem.Icon>
                                 </MenuFlyoutItem>
                             </MenuFlyout>

@@ -513,7 +513,12 @@ namespace winrt::TerminalApp::implementation
 
         // This kicks off TabView::SelectionChanged, in response to which
         // we'll attach the terminal's Xaml control to the Xaml root.
-        _tabView.SelectedIndex(_tabs.Size() - 1);
+        auto currentSelected = _tabView.SelectedIndex();
+        auto tabSize = _tabs.Size() - 1;
+        if (currentSelected == 0)
+        {
+        }
+        _tabView.SelectedIndex(tabSize);
     }
 
     // Method Description:
@@ -791,9 +796,13 @@ namespace winrt::TerminalApp::implementation
     // - tabIndex: the index of the tab to be removed
     void TerminalPage::_RemoveTabViewItemByIndex(uint32_t tabIndex)
     {
+        auto selectedIndex = TabView().SelectedIndex();
+
         // Removing the tab from the collection should destroy its control and disconnect its connection,
         // but it doesn't always do so. The UI tree may still be holding the control and preventing its destruction.
         auto tab{ _GetStrongTabImpl(tabIndex) };
+        auto isFocused = tab->IsFocused();
+
         tab->Shutdown();
 
         _tabs.RemoveAt(tabIndex);
@@ -832,6 +841,14 @@ namespace winrt::TerminalApp::implementation
             // selected item at all, which can make things like ClosePane not
             // work correctly.
             _tabView.SelectedIndex(newSelectedIndex);
+        }
+        else if (!isFocused && selectedIndex != -1)
+        {
+            // Current tab is in front of closing tab
+            if (selectedIndex > ::base::ClampedNumeric<int32_t>(tabIndex))
+            {
+                _tabView.SelectedIndex(selectedIndex - 1);
+            }
         }
     }
 
@@ -1546,7 +1563,10 @@ namespace winrt::TerminalApp::implementation
     {
         auto tabView = sender.as<MUX::Controls::TabView>();
         auto selectedIndex = tabView.SelectedIndex();
-        _UpdatedSelectedTab(selectedIndex);
+        if (selectedIndex >= 0)
+        {
+            _UpdatedSelectedTab(selectedIndex);
+        }
     }
 
     // Method Description:
