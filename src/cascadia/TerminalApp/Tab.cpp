@@ -350,6 +350,7 @@ namespace winrt::TerminalApp::implementation
     // - Prepares this tab for being removed from the UI hierarchy by shutting down all active connections.
     void Tab::Shutdown()
     {
+        _tabViewItem = nullptr;
         _rootPane->Shutdown();
     }
 

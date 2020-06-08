@@ -465,6 +465,12 @@ namespace winrt::TerminalApp::implementation
         auto newTabImpl = winrt::make_self<Tab>(profileGuid, term);
         _tabs.Append(*newTabImpl);
 
+        auto fsad = _tabs.Size();
+        auto fsad2 = TabView().TabItems().Size();
+        if (fsad == 0 && fsad2 == 0)
+        {
+        }
+
         // Hookup our event handlers to the new terminal
         _RegisterTerminalEvents(term, *newTabImpl);
 
@@ -802,7 +808,6 @@ namespace winrt::TerminalApp::implementation
         // but it doesn't always do so. The UI tree may still be holding the control and preventing its destruction.
         auto tab{ _GetStrongTabImpl(tabIndex) };
         auto isFocused = tab->IsFocused();
-
         tab->Shutdown();
 
         _tabs.RemoveAt(tabIndex);
@@ -844,6 +849,8 @@ namespace winrt::TerminalApp::implementation
         }
         else if (!isFocused && selectedIndex != -1)
         {
+            // So it seems that if we close a tab that isn't focused, SelectedIndex won't
+            // update automatically. This would cause a mismatch in 
             // Current tab is in front of closing tab
             if (selectedIndex > ::base::ClampedNumeric<int32_t>(tabIndex))
             {
