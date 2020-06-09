@@ -12,15 +12,11 @@ namespace TerminalApp
     {
         TerminalPage();
 
-        Int32 SetStartupCommandline(String[] commands);
-        String ParseCommandlineMessage { get; };
-        Boolean ShouldExitEarly { get; };
-
         // XAML bound properties
         String ApplicationDisplayName { get; };
         String ApplicationVersion { get; };
 
-		Windows.Foundation.Collections.IObservableVector<Tab> Tabs { get; };
+		Windows.Foundation.Collections.IObservableVector<Tab> Tabs { get; set; };
 
         event Windows.Foundation.TypedEventHandler<Object, String> TitleChanged;
         event Windows.Foundation.TypedEventHandler<Object, LastTabClosedEventArgs> LastTabClosed;

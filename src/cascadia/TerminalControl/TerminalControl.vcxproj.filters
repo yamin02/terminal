@@ -15,8 +15,6 @@
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
     <ClCompile Include="TermControlAutomationPeer.cpp" />
     <ClCompile Include="XamlUiaTextRange.cpp" />
-    <ClCompile Include="TermControlUiaProvider.cpp" />
-    <ClCompile Include="UiaTextRange.cpp" />
     <ClCompile Include="SearchBoxControl.cpp" />
     <ClCompile Include="init.cpp" />
   </ItemGroup>
@@ -25,14 +23,13 @@
     <ClInclude Include="TermControl.h" />
     <ClInclude Include="TermControlAutomationPeer.h" />
     <ClInclude Include="XamlUiaTextRange.h" />
-    <ClInclude Include="TermControlUiaProvider.hpp" />
-    <ClInclude Include="UiaTextRange.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Midl Include="TermControl.idl" />
     <Midl Include="TermControlAutomationPeer.idl" />
     <Midl Include="SearchBoxControl.idl" />
     <Midl Include="TSFInputControl.idl" />
+    <Midl Include="IMouseWheelListener.idl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="TerminalControl.def" />
@@ -40,13 +37,13 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="SearchBoxControl.xaml" />
+    <Page Include="TermControl.xaml" />
+    <Page Include="TSFInputControl.xaml" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="$(SolutionDir)tools\ConsoleTypes.natvis" />
   </ItemGroup>
   <ItemGroup>
-    <PRIResource Include="Resources\*\Resources.resw">
-      <Filter>Resources</Filter>
-    </PRIResource>
+    <PRIResource Include="Resources\en-US\Resources.resw" />
   </ItemGroup>
 </Project>

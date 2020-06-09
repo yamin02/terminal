@@ -47,7 +47,6 @@ namespace winrt::TerminalApp::implementation
 
         void UpdateSettings(const winrt::Microsoft::Terminal::Settings::TerminalSettings& settings, const GUID& profile);
         winrt::hstring GetActiveTitle() const;
-        winrt::fire_and_forget SetTabText(const winrt::hstring text);
 
         void Shutdown();
         void ClosePane();
@@ -56,6 +55,7 @@ namespace winrt::TerminalApp::implementation
 
         void _OnCloseTabMenuItemClick(const IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& e);
         void _OnColorMenuItemClick(const IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& e);
+        void _OnRenameTabMenuItemClick(const IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& e);
 
         winrt::Microsoft::UI::Xaml::Controls::TabViewItem _tabViewItem{ nullptr };
 
@@ -81,7 +81,10 @@ namespace winrt::TerminalApp::implementation
 
         bool _focused{ false };
 
-        //void _MakeTabViewItem();
+        winrt::hstring _runtimeTabText{};
+        bool _inRename{ false };
+        winrt::Windows::UI::Xaml::Controls::TextBox::LayoutUpdated_revoker _tabRenameBoxLayoutUpdatedRevoker;
+
         void _Focus();
 
         void _CreateContextMenu();
@@ -97,6 +100,10 @@ namespace winrt::TerminalApp::implementation
 
         int _GetLeafPaneCount() const noexcept;
         void _UpdateActivePane(std::shared_ptr<Pane> pane);
+
+        void _UpdateTabHeader();
+        winrt::fire_and_forget _UpdateTitle();
+        void _ConstructTabRenameBox(const winrt::hstring& tabText);
 
         friend class ::TerminalAppLocalTests::TabTests;
     };

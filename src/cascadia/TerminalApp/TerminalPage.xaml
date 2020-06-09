@@ -25,7 +25,7 @@ the MIT License. See LICENSE in the project root for license information. -->
                  CanReorderTabs="True"
                  CanDragTabs="True"
                  AllowDropTabs="True"
-                 TabItemsSource="{x:Bind Tabs, Mode=OneWay}"
+                 TabItemsSource="{x:Bind Tabs, Mode=TwoWay}"
                  SelectionChanged="_OnTabSelectionChanged"
                  TabCloseRequested="_OnTabCloseRequested">
 
@@ -41,6 +41,12 @@ the MIT License. See LICENSE in the project root for license information. -->
                                 <MenuFlyoutItem Text="TabColorChoose" Click="{x:Bind _OnColorMenuItemClick}">
                                     <MenuFlyoutItem.Icon>
                                         <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE790;"/>
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+
+                                <MenuFlyoutItem Text="RenameTabText" Click="{x:Bind _OnRenameTabMenuItemClick}">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE932;"/>
                                     </MenuFlyoutItem.Icon>
                                 </MenuFlyoutItem>
 

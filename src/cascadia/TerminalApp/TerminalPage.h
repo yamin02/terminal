@@ -49,11 +49,12 @@ namespace winrt::TerminalApp::implementation
 
         void CloseWindow();
 
-        int32_t SetStartupCommandline(winrt::array_view<const hstring> args);
-        winrt::hstring ParseCommandlineMessage();
-        bool ShouldExitEarly();
+        void ToggleFullscreen();
+
+        void SetStartupActions(std::deque<winrt::TerminalApp::ActionAndArgs>& actions);
 
         Windows::Foundation::Collections::IObservableVector<winrt::TerminalApp::Tab> Tabs();
+        void Tabs(Windows::Foundation::Collections::IObservableVector<winrt::TerminalApp::Tab> tab);
 
         void OnNewTabButtonClick(IInspectable const&, winrt::Microsoft::UI::Xaml::Controls::SplitButtonClickEventArgs const&);
 
@@ -92,8 +93,7 @@ namespace winrt::TerminalApp::implementation
         winrt::Windows::UI::Xaml::Controls::Grid::LayoutUpdated_revoker _layoutUpdatedRevoker;
         StartupState _startupState{ StartupState::NotInitialized };
 
-        ::TerminalApp::AppCommandlineArgs _appArgs;
-        int _ParseArgs(winrt::array_view<const hstring>& args);
+        std::deque<winrt::TerminalApp::ActionAndArgs> _startupActions;
         winrt::fire_and_forget _ProcessStartupActions();
 
         void _ShowAboutDialog();
@@ -166,12 +166,12 @@ namespace winrt::TerminalApp::implementation
 
         winrt::fire_and_forget _RefreshUIForSettingsReload();
 
-        void _ToggleFullscreen();
-
         void _SetNonClientAreaColors(const Windows::UI::Color& selectedTabColor);
         void _ClearNonClientAreaColors();
         void _SetNewTabButtonColor(const Windows::UI::Color& color, const Windows::UI::Color& accentColor);
         void _ClearNewTabButtonColor();
+
+        void _CompleteInitialization();
 
 #pragma region ActionHandlers
         // These are all defined in AppActionHandlers.cpp
