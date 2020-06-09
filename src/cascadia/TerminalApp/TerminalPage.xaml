@@ -25,7 +25,7 @@ the MIT License. See LICENSE in the project root for license information. -->
                  CanReorderTabs="True"
                  CanDragTabs="True"
                  AllowDropTabs="True"
-                 TabItemsSource="{x:Bind Tabs, Mode=TwoWay}"
+                 TabItemsSource="{x:Bind Tabs, Mode=OneWay}"
                  SelectionChanged="_OnTabSelectionChanged"
                  TabCloseRequested="_OnTabCloseRequested">
 
@@ -34,7 +34,7 @@ the MIT License. See LICENSE in the project root for license information. -->
                     <mux:TabViewItem
                         Header="{x:Bind Title, Mode=OneWay}"
                         IconSource="{x:Bind IconSource, Mode=OneWay}"
-                        PointerPressed="{x:Bind _OnTabItemClick}">
+                        Loaded="{x:Bind _OnTabItemClick}">
 
                         <mux:TabViewItem.ContextFlyout>
                             <MenuFlyout>

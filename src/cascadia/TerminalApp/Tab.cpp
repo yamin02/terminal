@@ -346,11 +346,7 @@ namespace winrt::TerminalApp::implementation
     // - Prepares this tab for being removed from the UI hierarchy by shutting down all active connections.
     void Tab::Shutdown()
     {
-        if (_tabViewItem)
-        {
-            _ResetTabColor();
-        }
-
+        _ResetTabColor();
         _rootPane->Shutdown();
     }
 
@@ -462,7 +458,7 @@ namespace winrt::TerminalApp::implementation
         });
     }
 
-    void Tab::_OnTabItemClick(const IInspectable& sender, const Windows::UI::Xaml::Input::PointerRoutedEventArgs& /*e*/)
+    void Tab::_OnTabItemClick(const IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& /*e*/)
     {
         if (auto temp = sender.try_as<winrt::Microsoft::UI::Xaml::Controls::TabViewItem>())
         {
