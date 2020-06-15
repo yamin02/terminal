@@ -88,6 +88,8 @@ namespace winrt::TerminalApp::implementation
 
         bool _isFullscreen{ false };
 
+        std::optional<winrt::Windows::UI::Color> _DraggedTabColor{};
+
         winrt::com_ptr<ShortcutActionDispatch> _actionDispatch{ winrt::make_self<ShortcutActionDispatch>() };
 
         winrt::Windows::UI::Xaml::Controls::Grid::LayoutUpdated_revoker _layoutUpdatedRevoker;
@@ -154,8 +156,8 @@ namespace winrt::TerminalApp::implementation
 
         fire_and_forget _LaunchSettings(const bool openDefaults);
 
-        //void _OnTabItemsChanged(const IInspectable& sender, const Windows::Foundation::Collections::IVectorChangedEventArgs& e);
-        //void _OnTabClick(const IInspectable& sender, const Windows::UI::Xaml::Input::PointerRoutedEventArgs& eventArgs);
+        void _OnTabDragStarting(const IInspectable& /*sender*/, const Microsoft::UI::Xaml::Controls::TabViewTabDragStartingEventArgs& eventArgs);
+        void _OnTabDragCompleted(const IInspectable& /*sender*/, const Microsoft::UI::Xaml::Controls::TabViewTabDragCompletedEventArgs& eventArgs);
         void _OnTabSelectionChanged(const IInspectable& sender, const Windows::UI::Xaml::Controls::SelectionChangedEventArgs& eventArgs);
         void _OnContentSizeChanged(const IInspectable& /*sender*/, Windows::UI::Xaml::SizeChangedEventArgs const& e);
         void _OnTabCloseRequested(const IInspectable& sender, const Microsoft::UI::Xaml::Controls::TabViewTabCloseRequestedEventArgs& eventArgs);

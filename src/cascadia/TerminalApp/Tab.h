@@ -52,14 +52,14 @@ namespace winrt::TerminalApp::implementation
         void ClosePane();
 
         std::optional<winrt::Windows::UI::Color> GetTabColor();
+        void _SetTabColor(const winrt::Windows::UI::Color& color);
+        void _ResetTabColor();
 
         void _OnCloseTabMenuItemClick(const IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& e);
         void _OnColorMenuItemClick(const IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& e);
         void _OnRenameTabMenuItemClick(const IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& e);
 
-        winrt::Microsoft::UI::Xaml::Controls::TabViewItem _tabViewItem{ nullptr };
-
-        void _OnTabItemClick(const IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& e);
+        void _OnTabItemLoaded(const IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& e);
 
         WINRT_CALLBACK(Closed, winrt::Windows::Foundation::EventHandler<winrt::Windows::Foundation::IInspectable>);
         WINRT_CALLBACK(PropertyChanged, Windows::UI::Xaml::Data::PropertyChangedEventHandler);
@@ -85,12 +85,12 @@ namespace winrt::TerminalApp::implementation
         bool _inRename{ false };
         winrt::Windows::UI::Xaml::Controls::TextBox::LayoutUpdated_revoker _tabRenameBoxLayoutUpdatedRevoker;
 
+        winrt::Microsoft::UI::Xaml::Controls::TabViewItem _tabViewItem{ nullptr };
+
         void _Focus();
 
         void _CreateContextMenu();
 
-        void _SetTabColor(const winrt::Windows::UI::Color& color);
-        void _ResetTabColor();
         void _RefreshVisualState();
 
         void _BindEventHandlers(const winrt::Microsoft::Terminal::TerminalControl::TermControl& control) noexcept;

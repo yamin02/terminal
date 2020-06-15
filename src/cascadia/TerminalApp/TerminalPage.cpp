@@ -66,6 +66,8 @@ namespace winrt::TerminalApp::implementation
         _tabContent = this->TabContent();
         _tabView = TabView();
 
+        //_rearranging = false;
+
         // GH#2455 - Make sure to try/catch calls to Application::Current,
         // because that _won't_ be an instance of TerminalApp::App in the
         // LocalTests
@@ -891,12 +893,21 @@ namespace winrt::TerminalApp::implementation
         {
             // So it seems that if we close a tab that isn't focused, SelectedIndex won't
             // update automatically. This would cause a mismatch if the
-            // current tab is in front of closing tab
+            // current tab is in front of the closing tab
             if (selectedIndex > ::base::ClampedNumeric<int32_t>(tabIndex))
             {
                 _tabView.SelectedIndex(selectedIndex - 1);
             }
         }
+
+        // GH#5559 - If we were in the middle of a drag/drop, end it by clearing
+        // out our state.
+        //if (_rearranging)
+        //{
+        //    _rearranging = false;
+        //    _rearrangeFrom = std::nullopt;
+        //    _rearrangeTo = std::nullopt;
+        //}
     }
 
     // Method Description:
@@ -1524,56 +1535,6 @@ namespace winrt::TerminalApp::implementation
         }
     }
 
-    //// Method Description:
-    //// - Additional responses to clicking on a TabView's item. Currently, just remove tab with middle click
-    //// Arguments:
-    //// - sender: the control that originated this event (TabViewItem)
-    //// - eventArgs: the event's constituent arguments
-    //void TerminalPage::_OnTabClick(const IInspectable& sender, const Windows::UI::Xaml::Input::PointerRoutedEventArgs& eventArgs)
-    //{
-    //    if (eventArgs.GetCurrentPoint(*this).Properties().IsRightButtonPressed())
-    //    {
-    //        auto tvi = sender.try_as<winrt::MUX::Controls::TabViewItem>();
-    //        auto head = tvi.Header();
-    //        tvi.Header(head);
-    //        eventArgs.Handled(true);
-    //    }
-    //}
-
-    //void TerminalPage::_OnTabItemsChanged(const IInspectable& /*sender*/, const Windows::Foundation::Collections::IVectorChangedEventArgs& e)
-    //{
-    //    if (e.CollectionChange() == Windows::Foundation::Collections::CollectionChange::ItemInserted)
-    //    {
-    //        auto idx = e.Index();
-    //        auto tabItems = TabView().TabItems();
-
-    //        if (tabItems.Size() > 0)
-    //        {
-    //            auto tabItem = TabView().TabItems().GetAt(idx).try_as<TerminalApp::Tab>();
-    //            auto temp = tabItem.Title();
-    //        }
-
-    //        if (idx == 0)
-    //        {
-    //        }
-    //    }
-    //}
-
-    //void TerminalPage::_OnTabLoaded(const IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& /*eventArgs*/)
-    //{
-    //    MUX::Controls::TabViewItem tabViewItem;
-    //    if (tabViewItem = sender.try_as<MUX::Controls::TabViewItem>())
-    //    {
-    //        uint32_t tabIndex;
-    //        if (TabView().TabItems().IndexOf(tabViewItem, tabIndex))
-    //        {
-    //            auto tab{ _GetStrongTabImpl(tabIndex) };
-    //            tab->_tabViewItem = tabViewItem;
-    //            tab->_CreateContextMenu();
-    //        }
-    //    }
-    //}
-
     void TerminalPage::_UpdatedSelectedTab(const int32_t index)
     {
         // Unfocus all the tabs.
@@ -1620,12 +1581,15 @@ namespace winrt::TerminalApp::implementation
     // - eventArgs: the event's constituent arguments
     void TerminalPage::_OnTabSelectionChanged(const IInspectable& sender, const WUX::Controls::SelectionChangedEventArgs& /*eventArgs*/)
     {
-        auto tabView = sender.as<MUX::Controls::TabView>();
-        auto selectedIndex = tabView.SelectedIndex();
-        if (selectedIndex >= 0)
-        {
-            _UpdatedSelectedTab(selectedIndex);
-        }
+        //if (!_rearranging)
+        //{
+            auto tabView = sender.as<MUX::Controls::TabView>();
+            auto selectedIndex = tabView.SelectedIndex();
+            if (selectedIndex >= 0)
+            {
+                _UpdatedSelectedTab(selectedIndex);
+            }
+        //}
     }
 
     // Method Description:
@@ -1665,6 +1629,31 @@ namespace winrt::TerminalApp::implementation
         }
 
         _RemoveTabViewItemByIndex(tabIndex);
+    }
+
+    void TerminalPage::_OnTabDragStarting(const IInspectable& /*sender*/, const MUX::Controls::TabViewTabDragStartingEventArgs& eventArgs)
+    {
+        auto tab = eventArgs.Item().as<TerminalApp::Tab>();
+        auto tabImpl{ _GetStrongTabImpl(tab) };
+
+        // Save the color of the tab that's being dragged if there's a custom color active.
+        // Then reset the color of the tab.
+
+        _DraggedTabColor = tabImpl->GetTabColor();
+        tabImpl->_ResetTabColor();
+    }
+
+    void TerminalPage::_OnTabDragCompleted(const IInspectable& /*sender*/, const MUX::Controls::TabViewTabDragCompletedEventArgs& eventArgs)
+    {
+        auto tab = eventArgs.Item().as<TerminalApp::Tab>();
+        auto tabImpl{ _GetStrongTabImpl(tab) };
+
+        // Apply the saved color from _OnTabDragStarting.
+        if (_DraggedTabColor)
+        {
+            tabImpl->_SetTabColor(_DraggedTabColor.value());
+        }
+
     }
 
     // Method Description:

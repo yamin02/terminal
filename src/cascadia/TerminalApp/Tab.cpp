@@ -346,6 +346,11 @@ namespace winrt::TerminalApp::implementation
     // - Prepares this tab for being removed from the UI hierarchy by shutting down all active connections.
     void Tab::Shutdown()
     {
+        // TODO: For reasons still unknown, even if a tab is closed and shutdown and removed from TerminalPage's _tabs
+        // vector, this current tab's tab color will appear on a new tab. It's almost as if the XAML resource dictionary
+        // for the particular TabViewItem this Tab is associated with ends up being reused in a new TabViewItem. Almost like
+        // the TabViewItems don't actually get deleted when the corresponding Tab datacontext is removed from the observable
+        // vector.
         _ResetTabColor();
         _rootPane->Shutdown();
     }
@@ -458,7 +463,7 @@ namespace winrt::TerminalApp::implementation
         });
     }
 
-    void Tab::_OnTabItemClick(const IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& /*e*/)
+    void Tab::_OnTabItemLoaded(const IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& /*e*/)
     {
         if (auto temp = sender.try_as<winrt::Microsoft::UI::Xaml::Controls::TabViewItem>())
         {

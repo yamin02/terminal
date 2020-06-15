@@ -27,14 +27,16 @@ the MIT License. See LICENSE in the project root for license information. -->
                  AllowDropTabs="True"
                  TabItemsSource="{x:Bind Tabs, Mode=OneWay}"
                  SelectionChanged="_OnTabSelectionChanged"
-                 TabCloseRequested="_OnTabCloseRequested">
+                 TabCloseRequested="_OnTabCloseRequested"
+                 TabDragStarting="_OnTabDragStarting"
+                 TabDragCompleted="_OnTabDragCompleted">
 
             <mux:TabView.TabItemTemplate>
                 <DataTemplate x:DataType="local:Tab">
                     <mux:TabViewItem
                         Header="{x:Bind Title, Mode=OneWay}"
                         IconSource="{x:Bind IconSource, Mode=OneWay}"
-                        Loaded="{x:Bind _OnTabItemClick}">
+                        Loaded="{x:Bind _OnTabItemLoaded}">
 
                         <mux:TabViewItem.ContextFlyout>
                             <MenuFlyout>
@@ -59,7 +61,7 @@ the MIT License. See LICENSE in the project root for license information. -->
                                 </MenuFlyoutItem>
                             </MenuFlyout>
                         </mux:TabViewItem.ContextFlyout>
-                        
+
                     </mux:TabViewItem>
                 </DataTemplate>
             </mux:TabView.TabItemTemplate>
