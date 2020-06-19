@@ -1,0 +1,22 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
+import "../Tab.idl";
+
+namespace TerminalApp
+{
+    [default_interface] runtimeclass TabSwitcherControl : Windows.UI.Xaml.Controls.Grid
+    {
+        TabSwitcherControl();
+
+        static Windows.UI.Xaml.DependencyProperty TabSourceProperty { get; };
+
+        //Windows.Foundation.Collections.IObservableVector<TerminalApp.Tab> FilteredActions { get; };
+
+        //void SetActions(Windows.Foundation.Collections.IVector<TerminalApp.Tab> actions);
+
+        void ToggleVisibility();
+
+        event Windows.Foundation.TypedEventHandler<TabSwitcherControl, Windows.UI.Xaml.RoutedEventArgs> Closed;
+    }
+}

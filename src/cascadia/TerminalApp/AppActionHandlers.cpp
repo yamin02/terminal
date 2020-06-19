@@ -237,4 +237,11 @@ namespace winrt::TerminalApp::implementation
         ToggleFullscreen();
         args.Handled(true);
     }
+
+    void TerminalPage::_HandleOpenTabSwitcher(const IInspectable& /*sender*/,
+                                              const TerminalApp::ActionEventArgs& args)
+    {
+        // TODO HANDLE
+        args.Handled(true);
+    }
 }

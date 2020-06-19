@@ -33,6 +33,7 @@ static constexpr std::string_view ResizePaneKey{ "resizePane" };
 static constexpr std::string_view MoveFocusKey{ "moveFocus" };
 static constexpr std::string_view FindKey{ "find" };
 static constexpr std::string_view ToggleFullscreenKey{ "toggleFullscreen" };
+static constexpr std::string_view OpenTabSwitcherKey{ "OpenTabSwitcherKey" };
 
 namespace winrt::TerminalApp::implementation
 {
@@ -69,7 +70,8 @@ namespace winrt::TerminalApp::implementation
         { ToggleFullscreenKey, ShortcutAction::ToggleFullscreen },
         { SplitPaneKey, ShortcutAction::SplitPane },
         { UnboundKey, ShortcutAction::Invalid },
-        { FindKey, ShortcutAction::Find }
+        { FindKey, ShortcutAction::Find },
+        { OpenTabSwitcherKey, ShortcutAction::OpenTabSwitcher }
     };
 
     using ParseResult = std::tuple<IActionArgs, std::vector<::TerminalApp::SettingsLoadWarnings>>;

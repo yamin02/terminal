@@ -63,6 +63,9 @@
     <Page Include="../ColorPickupFlyout.xaml">
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="../TabSwitcherControl.xaml">
+      <SubType>Designer</SubType>
+    </Page>
   </ItemGroup>
   <!-- ========================= Headers ======================== -->
   <ItemGroup>
@@ -84,6 +87,9 @@
     </ClInclude>
     <ClInclude Include="../ColorPickupFlyout.h">
       <DependentUpon>../ColorPickupFlyout.xaml</DependentUpon>
+    </ClInclude>
+    <ClInclude Include="../TabSwitcherControl.h">
+      <DependentUpon>../TabSwitcherControl.xaml</DependentUpon>
     </ClInclude>
     <ClInclude Include="../Tab.h">
       <DependentUpon>../Tab.idl</DependentUpon>
@@ -145,6 +151,9 @@
     </ClCompile>
     <ClCompile Include="../ColorPickupFlyout.cpp">
       <DependentUpon>../ColorPickupFlyout.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="../TabSwitcherControl.cpp">
+      <DependentUpon>../TabSwitcherControl.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="../Tab.cpp">
       <DependentUpon>../Tab.idl</DependentUpon>
@@ -227,6 +236,10 @@
     </Midl>
     <Midl Include="../ColorPickupFlyout.idl">
       <DependentUpon>../ColorPickupFlyout.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Midl>
+    <Midl Include="../TabSwitcherControl.idl">
+      <DependentUpon>../TabSwitcherControl.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Midl>
     <Midl Include="../Tab.idl"/>

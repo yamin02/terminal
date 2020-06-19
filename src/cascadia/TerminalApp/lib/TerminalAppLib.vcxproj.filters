@@ -146,6 +146,9 @@
     <Page Include="../ColorPickupFlyout.xaml">
       <Filter>controls</Filter>
     </Page>
+        <Page Include="../TabSwitcherControl.xaml">
+      <Filter>controls</Filter>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="app">
